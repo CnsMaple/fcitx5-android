@@ -7,6 +7,7 @@ import android.view.View
 import android.widget.FrameLayout
 import androidx.annotation.ColorInt
 import jaygoo.widget.wlv.WaveLineView
+import kotlin.math.ln
 
 /**
  * 轻量封装的实时音频波形视图（与言犀保持一致的 API）。
@@ -16,6 +17,11 @@ class WaveformView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : FrameLayout(context, attrs, defStyleAttr) {
+
+    companion object {
+        private const val AMPLITUDE_GAIN = 1.6
+        private const val AMPLITUDE_LOG_K = 18.0
+    }
 
     private var isActive = false
     private val waveView: WaveLineView = WaveLineView(context).apply {
@@ -33,8 +39,13 @@ class WaveformView @JvmOverloads constructor(
 
     fun updateAmplitude(amplitude: Float) {
         if (!isActive) return
-        val vol = (amplitude.coerceIn(0f, 1f) * 100f).toInt()
-        waveView.setVolume(vol)
+        waveView.setVolume(amplitudeToVolume(amplitude))
+    }
+
+    private fun amplitudeToVolume(amplitude: Float): Int {
+        val a = (amplitude.coerceIn(0f, 1f).toDouble() * AMPLITUDE_GAIN).coerceIn(0.0, 1.0)
+        val mapped = ln(1.0 + AMPLITUDE_LOG_K * a) / ln(1.0 + AMPLITUDE_LOG_K)
+        return (mapped * 100.0).toInt().coerceIn(0, 100)
     }
 
     fun start() {
