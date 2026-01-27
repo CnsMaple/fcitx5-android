@@ -186,6 +186,9 @@ class CommonKeyActionListener :
                             runCatching {
                                 val kw = (windowManager.getEssentialWindow(KeyboardWindow) as KeyboardWindow)
                                 ContextCompat.getMainExecutor(service).execute { kw.showVoiceOverlay() }
+                                org.fcitx.fcitx5.android.link.VoiceOverlayUiBridge.onRecordingStarted = {
+                                    ContextCompat.getMainExecutor(service).execute { kw.startVoiceOverlayWave() }
+                                }
                                 org.fcitx.fcitx5.android.link.VoiceOverlayUiBridge.onAmplitude = { amp ->
                                     ContextCompat.getMainExecutor(service).execute { kw.updateVoiceOverlayAmplitude(amp) }
                                 }

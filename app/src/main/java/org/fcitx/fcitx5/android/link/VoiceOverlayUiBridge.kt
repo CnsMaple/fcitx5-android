@@ -6,10 +6,12 @@ package org.fcitx.fcitx5.android.link
  * - AsrkbSpeechClient 在回调线程里调用这些回调以更新/关闭覆盖层。
  */
 object VoiceOverlayUiBridge {
+    @Volatile var onRecordingStarted: (() -> Unit)? = null
     @Volatile var onAmplitude: ((Float) -> Unit)? = null
     @Volatile var onDone: (() -> Unit)? = null
 
     fun clear() {
+        onRecordingStarted = null
         onAmplitude = null
         onDone = null
     }

@@ -221,8 +221,7 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
                 ColorUtils.calculateContrast(it, bgColor) >= 2.5
             } ?: theme.genericActiveForegroundColor
             setWaveformColor(lineColor)
-            visibility = View.VISIBLE
-            start()
+            visibility = View.INVISIBLE
         }
         overlay.addView(wave, FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT))
         val ts = TransitionSet().apply {
@@ -233,6 +232,12 @@ class KeyboardWindow : InputWindow.SimpleInputWindow<KeyboardWindow>(), Essentia
         keyboardView.addView(overlay)
         voiceOverlay = overlay
         voiceWave = wave
+    }
+
+    fun startVoiceOverlayWave() {
+        val wave = voiceWave ?: return
+        wave.visibility = View.VISIBLE
+        wave.start()
     }
 
     /**

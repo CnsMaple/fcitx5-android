@@ -17,6 +17,7 @@ import android.util.Log
 import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.input.FcitxInputMethodService
 import org.fcitx.fcitx5.android.R
@@ -292,10 +293,19 @@ object AsrkbSpeechClient {
             }
 
             val chunk = ByteArray(chunkBytes)
+            var notifiedRecordingStarted = false
             while (true) {
                 if (sessionId <= 0 || remote == null) break
                 val n = try { audioRecord?.read(chunk, 0, chunk.size) ?: -1 } catch (t: Throwable) { -1 }
-                if (n <= 0) break
+                if (n < 0) break
+                if (n == 0) {
+                    delay(10)
+                    continue
+                }
+                if (!notifiedRecordingStarted) {
+                    notifiedRecordingStarted = true
+                    runCatching { VoiceOverlayUiBridge.onRecordingStarted?.invoke() }
+                }
                 writePcmFrame(chunk, n, sr, 1)
             }
         }
