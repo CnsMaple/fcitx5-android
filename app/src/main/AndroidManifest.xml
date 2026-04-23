@@ -13,6 +13,10 @@
 
     <uses-permission android:name="android.permission.VIBRATE" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- 权限：访问言犀外部语音服务（AIDL） -->
+    <uses-permission android:name="com.brycewg.asrkb.EXTERNAL_SPEECH" />
+    <uses-permission android:name="com.brycewg.asrkb.pro.EXTERNAL_SPEECH" />
 
     <!-- remove intent queries merged from library manifest (namely Android-Image-Cropper) -->
     <queries tools:node="removeAll" />
@@ -24,6 +28,9 @@
         <intent>
             <action android:name="android.view.InputMethod" />
         </intent>
+        <!-- 显式声明目标包可见性 -->
+        <package android:name="com.brycewg.asrkb" />
+        <package android:name="com.brycewg.asrkb.pro" />
     </queries>
 
     <permission
@@ -121,9 +128,15 @@
             android:theme="@style/Theme.DialogTheme"
             android:windowSoftInputMode="stateAlwaysVisible|adjustPan" />
 
+        <activity 
+            android:name=".link.MicPermissionActivity"
+            android:exported="false"
+            android:excludeFromRecents="true"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
+            
         <service
             android:name=".input.FcitxInputMethodService"
-            android:directBootAware="true"
+            android:directBootAware="false"
             android:exported="true"
             android:label="@string/app_name"
             android:permission="android.permission.BIND_INPUT_METHOD">
@@ -171,9 +184,10 @@
         <provider
             android:name="androidx.startup.InitializationProvider"
             android:authorities="${applicationId}.androidx-startup"
-            android:directBootAware="true"
+            android:directBootAware="false"
             android:exported="false"
-            tools:node="merge">
+            tools:node="merge"
+            tools:replace="android:directBootAware">
             <!-- do not inject splitties AppCompat -->
             <meta-data
                 android:name="splitties.views.dsl.appcompat.experimental.AppCompatViewInstantiatorInjecter"

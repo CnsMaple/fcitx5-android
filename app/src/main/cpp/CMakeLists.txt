@@ -39,6 +39,16 @@ find_package(libuv)
 list(APPEND CMAKE_FIND_ROOT_PATH "${PREBUILT_DIR}/boost/${ANDROID_ABI}/lib/cmake")
 find_package(Boost 1.86.0 REQUIRED COMPONENTS headers iostreams CONFIG)
 
+# Temporary fallback for Windows when the ABI-specific Boost include
+# is a broken symlink/file (common on repos cloned without symlink support).
+set(_BOOST_ABI_INCLUDE "${PREBUILT_DIR}/boost/${ANDROID_ABI}/include")
+if(NOT IS_DIRECTORY "${_BOOST_ABI_INCLUDE}")
+    message(WARNING "Boost ABI include '${_BOOST_ABI_INCLUDE}' is not a directory; "
+                    "falling back to '${PREBUILT_DIR}/boost/include'.")
+    include_directories(BEFORE "${PREBUILT_DIR}/boost/include")
+    set(Boost_INCLUDE_DIRS "${PREBUILT_DIR}/boost/include" CACHE PATH "" FORCE)
+endif()
+
 set(CHINESE_ADDONS_PINYIN_DIR "${CMAKE_CURRENT_SOURCE_DIR}/../../../../lib/fcitx5-chinese-addons/src/main/cpp/fcitx5-chinese-addons/im/pinyin")
 add_library(pinyin-customphrase STATIC "${CHINESE_ADDONS_PINYIN_DIR}/customphrase.cpp")
 target_include_directories(pinyin-customphrase INTERFACE "${CHINESE_ADDONS_PINYIN_DIR}")
@@ -60,6 +70,11 @@ target_link_libraries(native-lib
         LibIME::Table
         pinyin-customphrase
         )
+
+# Ensure Boost headers are visible to native-lib even if ABI include symlink is broken
+if(DEFINED Boost_INCLUDE_DIRS)
+    target_include_directories(native-lib BEFORE PRIVATE "${Boost_INCLUDE_DIRS}")
+endif()
 
 # copy module libraries from dependency lib
 add_custom_target(copy-fcitx5-modules

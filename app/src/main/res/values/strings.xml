@@ -202,6 +202,7 @@
     <string name="space_behavior_enumerate">Enumerate input methods</string>
     <string name="space_behavior_activate">Toggle input method activate state</string>
     <string name="space_behavior_picker">Show input method picker dialog</string>
+    <string name="space_behavior_voice_input">Voice input (AIDL)</string>
     <string name="show_lang_switch_key">Show language switch key</string>
     <string name="horizontal_candidate_style">Horizontal candidate style</string>
     <string name="horizontal_candidate_never_fill">Never fill width</string>
@@ -225,6 +226,7 @@
     <string name="main_program">main program</string>
     <string name="edit_theme">Edit Theme</string>
     <string name="show_voice_input_button">Show voice input button</string>
+    <string name="voice_input_tap_to_stop">Use tap to stop voice input</string>
     <string name="fcitx_daemon">Fcitx Daemon</string>
     <string name="restarting_fcitx">Restarting Fcitx</string>
     <string name="plugin_needs_reload">Plugin changes detected, click here to reload</string>
@@ -317,4 +319,11 @@
     <string name="hide_unsupported_emojis">Hide unsupported Emojis</string>
     <string name="key_border_stroke">Enable stroke for key border</string>
     <string name="preferred_voice_input">Preferred voice input</string>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">Voice service is busy. Please try again.</string>
+    <string name="asrkb_err_feature_disabled">Enable "External IME link (AIDL)" in Lexi.</string>
+    <string name="asrkb_client_need_mic_permission">Microphone permission is required for voice input.</string>
+    <string name="asrkb_err_audio_record_failed">Failed to initialize audio recording. Microphone may be in use by another app.</string>
+    <string name="asrkb_err_start_failed_with_code">Failed to start session (code %1$d)</string>
+    <string name="asrkb_err_service_error_with_code">Voice service error (code %1$d)</string>
 </resources>

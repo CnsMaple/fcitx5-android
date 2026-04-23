@@ -24,6 +24,18 @@ list(APPEND CMAKE_FIND_ROOT_PATH "${PREBUILT_DIR}/boost/${ANDROID_ABI}/lib/cmake
 find_package(Boost 1.87.0 REQUIRED COMPONENTS iostreams CONFIG)
 add_compile_definitions("BOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS")
 
+# Temporary fallback for Windows when the ABI-specific Boost include
+# is a broken symlink/file (common on repos cloned without symlink support).
+set(_BOOST_ABI_INCLUDE "${PREBUILT_DIR}/boost/${ANDROID_ABI}/include")
+if(NOT IS_DIRECTORY "${_BOOST_ABI_INCLUDE}")
+    message(WARNING "Boost ABI include '${_BOOST_ABI_INCLUDE}' is not a directory; "
+                    "falling back to '${PREBUILT_DIR}/boost/include'.")
+    # Ensure headers are discoverable for all subdirs/targets
+    include_directories(BEFORE "${PREBUILT_DIR}/boost/include")
+    # Also help CMake files that rely on Boost_INCLUDE_DIRS
+    set(Boost_INCLUDE_DIRS "${PREBUILT_DIR}/boost/include" CACHE PATH "" FORCE)
+endif()
+
 # prebuilt zstd
 set(zstd_DIR "${PREBUILT_DIR}/zstd/${ANDROID_ABI}/lib/cmake/zstd")
 find_package(zstd)

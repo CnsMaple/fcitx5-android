@@ -197,6 +197,7 @@
     <string name="space_behavior_enumerate">インプットメゾッド一覧を表示する</string>
     <string name="space_behavior_activate">インプットメゾッドのアクティブな状態を切り替える</string>
     <string name="space_behavior_picker">インプットメゾッド選択ダイアログを表示する</string>
+    <string name="space_behavior_voice_input">音声入力（AIDL）</string>
     <string name="show_lang_switch_key">言語切り替えキーを表示する</string>
     <string name="horizontal_candidate_style">水平候補スタイル</string>
     <string name="horizontal_candidate_never_fill">幅を調節しない</string>
@@ -220,6 +221,7 @@
     <string name="main_program">メインプログラム</string>
     <string name="edit_theme">テーマを編集</string>
     <string name="show_voice_input_button">音声入力ボタンを表示する</string>
+    <string name="voice_input_tap_to_stop">タップで音声入力を終了する</string>
     <string name="fcitx_daemon">Fcitxデーモン</string>
     <string name="restarting_fcitx">Fcitxを再起動中</string>
     <string name="plugin_needs_reload">プラグインの変更を除去しました。ここをクリックして再読み込みします</string>
@@ -254,4 +256,11 @@
     <string name="flip_horizontally">左右反転</string>
     <string name="flip_vertically">上下反転</string>
     <string name="crop">切り取り</string>
-    </resources>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">音声サービスがビジーです。しばらくしてからお試しください。</string>
+    <string name="asrkb_err_feature_disabled">Lexi 側で「外部IME連携（AIDL）」。</string>
+    <string name="asrkb_client_need_mic_permission">音声入力にはマイク権限が必要です。</string>
+    <string name="asrkb_err_audio_record_failed">音声録音の初期化に失敗しました。マイクが他のアプリで使用中の可能性があります。</string>
+    <string name="asrkb_err_start_failed_with_code">セッション開始に失敗しました（コード %1$d）</string>
+    <string name="asrkb_err_service_error_with_code">音声サービスエラー（コード %1$d）</string>
+</resources>

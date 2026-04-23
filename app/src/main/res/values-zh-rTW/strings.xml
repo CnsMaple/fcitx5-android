@@ -202,6 +202,7 @@
     <string name="space_behavior_enumerate">輪換輸入法</string>
     <string name="space_behavior_activate">在目前輸入法與第一個輸入法之間切換</string>
     <string name="space_behavior_picker">顯示選擇輸入法對話框</string>
+    <string name="space_behavior_voice_input">語音輸入（AIDL）</string>
     <string name="show_lang_switch_key">顯示語言切換鍵</string>
     <string name="horizontal_candidate_style">橫向候選詞樣式</string>
     <string name="horizontal_candidate_never_fill">從不填充寬度</string>
@@ -225,6 +226,7 @@
     <string name="main_program">主程式</string>
     <string name="edit_theme">編輯主題</string>
     <string name="show_voice_input_button">顯示語音輸入鍵</string>
+    <string name="voice_input_tap_to_stop">使用點按控制語音輸入</string>
     <string name="fcitx_daemon">Fcitx 常駐程式</string>
     <string name="restarting_fcitx">重新啟動 Fcitx</string>
     <string name="plugin_needs_reload">偵測到有外掛程式變化，點此重新載入</string>
@@ -316,4 +318,11 @@
     <string name="emoji_skin_tone_type_6">🏿 深膚色 (Type-6)</string>
     <string name="hide_unsupported_emojis">隱藏不支援的表情</string>
     <string name="preferred_voice_input">首選語音輸入</string>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">語音服務忙碌中，請稍後再試。</string>
+    <string name="asrkb_err_feature_disabled">請先在言犀中開啟「允許外部輸入法聯動（AIDL）。</string>
+    <string name="asrkb_client_need_mic_permission">小企鵝需要麥克風權限以進行語音輸入。</string>
+    <string name="asrkb_err_audio_record_failed">音訊錄製初始化失敗，麥克風可能被其他應用程式占用。</string>
+    <string name="asrkb_err_start_failed_with_code">啟動會話失敗（錯誤碼 %1$d）</string>
+    <string name="asrkb_err_service_error_with_code">語音服務錯誤（錯誤碼 %1$d）</string>
 </resources>

@@ -36,6 +36,16 @@ list(APPEND CMAKE_FIND_ROOT_PATH "${PREBUILT_DIR}/boost/${ANDROID_ABI}/lib/cmake
 find_package(Boost 1.87.0 REQUIRED COMPONENTS iostreams CONFIG)
 add_compile_definitions("BOOST_ALL_NO_EMBEDDED_GDB_SCRIPTS")
 
+# Temporary fallback for Windows when the ABI-specific Boost include
+# is a broken symlink/file (common on repos cloned without symlink support).
+set(_BOOST_ABI_INCLUDE "${PREBUILT_DIR}/boost/${ANDROID_ABI}/include")
+if(NOT IS_DIRECTORY "${_BOOST_ABI_INCLUDE}")
+    message(WARNING "Boost ABI include '${_BOOST_ABI_INCLUDE}' is not a directory; "
+                    "falling back to '${PREBUILT_DIR}/boost/include'.")
+    include_directories(BEFORE "${PREBUILT_DIR}/boost/include")
+    set(Boost_INCLUDE_DIRS "${PREBUILT_DIR}/boost/include" CACHE PATH "" FORCE)
+endif()
+
 # prebuilt marisa-tire, OpenCC needs it
 set(marisa_DIR "${PREBUILT_DIR}/marisa/${ANDROID_ABI}/lib/cmake/marisa")
 find_package(marisa)

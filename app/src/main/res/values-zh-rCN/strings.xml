@@ -202,6 +202,7 @@
     <string name="space_behavior_enumerate">轮换输入法</string>
     <string name="space_behavior_activate">在当前输入法和第一个输入法之间切换</string>
     <string name="space_behavior_picker">显示输入法选择对话框</string>
+    <string name="space_behavior_voice_input">语音输入（AIDL）</string>
     <string name="show_lang_switch_key">显示语言切换键</string>
     <string name="horizontal_candidate_style">横向候选词样式</string>
     <string name="horizontal_candidate_never_fill">从不填充宽度</string>
@@ -225,6 +226,7 @@
     <string name="main_program">主程序</string>
     <string name="edit_theme">编辑主题</string>
     <string name="show_voice_input_button">显示语音输入按钮</string>
+    <string name="voice_input_tap_to_stop">使用点按控制语音输入</string>
     <string name="fcitx_daemon">Fcitx 守护程序</string>
     <string name="restarting_fcitx">正在重新启动 Fcitx</string>
     <string name="plugin_needs_reload">检测到插件更改，点此重新加载</string>
@@ -317,4 +319,11 @@
     <string name="hide_unsupported_emojis">隐藏不支持的表情</string>
     <string name="key_border_stroke">启用按键边框描边</string>
     <string name="preferred_voice_input">首选语音输入</string>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">语音服务正忙，请稍后再试。</string>
+    <string name="asrkb_err_feature_disabled">请先在言犀中开启"允许外部输入法联动（AIDL）"。</string>
+    <string name="asrkb_client_need_mic_permission">小企鹅需要麦克风权限以进行语音输入。</string>
+    <string name="asrkb_err_audio_record_failed">音频录制初始化失败，麦克风可能被其他应用占用。</string>
+    <string name="asrkb_err_start_failed_with_code">启动会话失败（错误码 %1$d）</string>
+    <string name="asrkb_err_service_error_with_code">语音服务错误（错误码 %1$d）</string>
 </resources>
