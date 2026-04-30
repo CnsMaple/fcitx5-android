@@ -234,6 +234,9 @@ class Fcitx(private val context: Context) : FcitxAPI, FcitxLifecycleOwner {
         external fun setupLogStream(verbose: Boolean)
 
         @JvmStatic
+        external fun setRimeUserDataDir(path: String?)
+
+        @JvmStatic
         external fun startupFcitx(
             locale: String,
             appData: String,
@@ -441,6 +444,10 @@ class Fcitx(private val context: Context) : FcitxAPI, FcitxLifecycleOwner {
                extDomains=${extDomains.joinToString()}
             """.trimIndent()
             )
+            // Set RIME user data directory if external path is configured
+            val rimeDir = AppPrefs.getInstance().rimeUserDataPath.getValue()
+            setRimeUserDataDir(if (rimeDir.isNotEmpty()) rimeDir else null)
+
             with(FcitxApplication.getInstance().directBootAwareContext) {
                 startupFcitx(
                     locale,

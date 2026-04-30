@@ -326,4 +326,21 @@
     <string name="asrkb_err_audio_record_failed">音频录制初始化失败，麦克风可能被其他应用占用。</string>
     <string name="asrkb_err_start_failed_with_code">启动会话失败（错误码 %1$d）</string>
     <string name="asrkb_err_service_error_with_code">语音服务错误（错误码 %1$d）</string>
+
+    <!-- RIME user data directory -->
+    <string name="rime_user_data_dir_title">RIME 用户数据目录</string>
+    <string name="rime_user_data_dir_current">当前：%1$s</string>
+    <string name="rime_user_data_dir_internal">内部（data/rime）</string>
+    <string name="rime_user_data_dir_default">默认</string>
+    <string name="rime_user_data_dir_select">选择目录</string>
+    <string name="rime_user_data_dir_confirm">确定</string>
+    <string name="rime_user_data_dir_cancel">取消</string>
+    <string name="rime_user_data_dir_will_change_to">将修改为：%1$s</string>
+    <string name="rime_user_data_dir_permission_denied">无法访问所选目录，请授予存储权限。</string>
+    <string name="rime_user_data_dir_permission_revoked">目录访问权限已被撤销，请重新授权或使用内部目录。</string>
+    <string name="rime_user_data_dir_deleted">所选目录已不存在，请重新选择目录。</string>
+    <string name="rime_user_data_dir_re_authorize">重新授权</string>
+    <string name="rime_user_data_dir_use_internal">使用内部目录</string>
+    <string name="rime_user_data_dir_restart_required">更改目录需要重启 RIME 才能生效。立即重启？</string>
+    <string name="rime_user_data_dir_confirm_message">当前：\n%1$s\n\n将修改为：\n%2$s</string>
 </resources>

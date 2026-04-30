@@ -42,7 +42,7 @@ class AndroidAppConventionPlugin : AndroidBaseConventionPlugin() {
             buildTypes {
                 release {
                     isMinifyEnabled = true
-                    isShrinkResources = true
+                    isShrinkResources = false
                     signingConfig = signingConfigs.fromProjectEnv(target)
                     proguardFile(getDefaultProguardFile("proguard-android-optimize.txt"))
                 }

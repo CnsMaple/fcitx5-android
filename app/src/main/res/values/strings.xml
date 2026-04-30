@@ -326,4 +326,21 @@
     <string name="asrkb_err_audio_record_failed">Failed to initialize audio recording. Microphone may be in use by another app.</string>
     <string name="asrkb_err_start_failed_with_code">Failed to start session (code %1$d)</string>
     <string name="asrkb_err_service_error_with_code">Voice service error (code %1$d)</string>
+
+    <!-- RIME user data directory -->
+    <string name="rime_user_data_dir_title">RIME User Data Directory</string>
+    <string name="rime_user_data_dir_current">Current: %1$s</string>
+    <string name="rime_user_data_dir_internal">Internal (data/rime)</string>
+    <string name="rime_user_data_dir_default">Default</string>
+    <string name="rime_user_data_dir_select">Select Directory</string>
+    <string name="rime_user_data_dir_confirm">Confirm</string>
+    <string name="rime_user_data_dir_cancel">Cancel</string>
+    <string name="rime_user_data_dir_will_change_to">Will change to: %1$s</string>
+    <string name="rime_user_data_dir_permission_denied">Cannot access the selected directory. Please grant storage permission.</string>
+    <string name="rime_user_data_dir_permission_revoked">Access to the directory has been revoked. Please re-authorize or use internal directory.</string>
+    <string name="rime_user_data_dir_deleted">The selected directory no longer exists. Please re-select a directory.</string>
+    <string name="rime_user_data_dir_re_authorize">Re-authorize</string>
+    <string name="rime_user_data_dir_use_internal">Use Internal</string>
+    <string name="rime_user_data_dir_restart_required">Restart RIME for the directory change to take effect. Restart now?</string>
+    <string name="rime_user_data_dir_confirm_message">Current:\n%1$s\n\nWill change to:\n%2$s</string>
 </resources>

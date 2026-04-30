@@ -392,6 +392,8 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
     val clipboard = Clipboard().register()
     val symbols = Symbols().register()
     val advanced = Advanced().register()
+    val rimeUserDataUri = ManagedPreference.PString(sharedPreferences, "rime_user_data_uri", "")
+    val rimeUserDataPath = ManagedPreference.PString(sharedPreferences, "rime_user_data_path", "")
 
     @Keep
     private val onSharedPreferenceChangeListener =

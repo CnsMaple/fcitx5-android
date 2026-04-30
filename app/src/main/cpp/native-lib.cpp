@@ -503,6 +503,17 @@ Java_org_fcitx_fcitx5_android_core_Fcitx_setupLogStream(JNIEnv *env, jclass claz
 
 extern "C"
 JNIEXPORT void JNICALL
+Java_org_fcitx_fcitx5_android_core_Fcitx_setRimeUserDataDir(JNIEnv *env, jclass clazz,
+                                                             jstring path) {
+    if (path) {
+        setenv("FCITX_RIME_USER_DATA_DIR", CString(env, path), 1);
+    } else {
+        unsetenv("FCITX_RIME_USER_DATA_DIR");
+    }
+}
+
+extern "C"
+JNIEXPORT void JNICALL
 Java_org_fcitx_fcitx5_android_core_Fcitx_startupFcitx(
         JNIEnv *env, jclass clazz,
         jstring locale,

@@ -325,4 +325,21 @@
     <string name="asrkb_err_audio_record_failed">音訊錄製初始化失敗，麥克風可能被其他應用程式占用。</string>
     <string name="asrkb_err_start_failed_with_code">啟動會話失敗（錯誤碼 %1$d）</string>
     <string name="asrkb_err_service_error_with_code">語音服務錯誤（錯誤碼 %1$d）</string>
+
+    <!-- RIME user data directory -->
+    <string name="rime_user_data_dir_title">RIME 使用者資料目錄</string>
+    <string name="rime_user_data_dir_current">目前：%1$s</string>
+    <string name="rime_user_data_dir_internal">內部（data/rime）</string>
+    <string name="rime_user_data_dir_default">預設</string>
+    <string name="rime_user_data_dir_select">選擇目錄</string>
+    <string name="rime_user_data_dir_confirm">確定</string>
+    <string name="rime_user_data_dir_cancel">取消</string>
+    <string name="rime_user_data_dir_will_change_to">將修改為：%1$s</string>
+    <string name="rime_user_data_dir_permission_denied">無法存取所選目錄，請授予儲存權限。</string>
+    <string name="rime_user_data_dir_permission_revoked">目錄存取權限已被撤銷，請重新授權或使用內部目錄。</string>
+    <string name="rime_user_data_dir_deleted">所選目錄已不存在，請重新選擇目錄。</string>
+    <string name="rime_user_data_dir_re_authorize">重新授權</string>
+    <string name="rime_user_data_dir_use_internal">使用內部目錄</string>
+    <string name="rime_user_data_dir_restart_required">更改目錄需要重新啟動 RIME 才能生效。立即重新啟動？</string>
+    <string name="rime_user_data_dir_confirm_message">目前：\n%1$s\n\n將修改為：\n%2$s</string>
 </resources>

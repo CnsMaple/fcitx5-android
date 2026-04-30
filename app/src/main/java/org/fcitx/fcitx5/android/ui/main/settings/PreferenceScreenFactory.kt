@@ -51,7 +51,8 @@ object PreferenceScreenFactory {
         preferenceManager: PreferenceManager,
         fragmentManager: FragmentManager,
         raw: RawConfig,
-        save: () -> Unit
+        save: () -> Unit,
+        onPickRimeDirectory: (() -> Unit)? = null
     ): PreferenceScreen {
         val context = preferenceManager.context
         val screen = preferenceManager.createPreferenceScreen(context)
@@ -62,7 +63,7 @@ object PreferenceScreenFactory {
         val topLevelDesc = ConfigDescriptor.parseTopLevel(desc).getOrElse { throw it }
         screen.title = topLevelDesc.name
         topLevelDesc.values.forEach {
-            general(context, fragmentManager, cfg.findByName(it.name), screen, it, store, save)
+            general(context, fragmentManager, cfg.findByName(it.name), screen, it, store, save, onPickRimeDirectory)
         }
         return screen
     }
@@ -74,7 +75,8 @@ object PreferenceScreenFactory {
         screen: PreferenceScreen,
         descriptor: ConfigDescriptor<*, *>,
         store: PreferenceDataStore,
-        save: () -> Unit
+        save: () -> Unit,
+        onPickRimeDirectory: (() -> Unit)? = null
     ) {
 
         // Hide key related configs
@@ -83,7 +85,7 @@ object PreferenceScreenFactory {
         }
 
         if (descriptor is ConfigCustom) {
-            custom(context, fragmentManager, cfg, screen, descriptor, save)
+            custom(context, fragmentManager, cfg, screen, descriptor, save, onPickRimeDirectory)
             return
         }
 
@@ -132,32 +134,19 @@ object PreferenceScreenFactory {
             }
         }
 
-        fun rimeUserDataDir(title: String): Preference = LongClickPreference(context).apply {
-            setOnPreferenceClickListener {
-                AlertDialog.Builder(context)
-                    .setTitle(title)
-                    .setMessage(R.string.open_rime_user_data_dir)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        try {
-                            context.startActivity(buildDocumentsProviderIntent())
-                        } catch (e: Exception) {
-                            context.toast(e)
-                        }
-                    }
-                    .show()
-                true
-            }
-
-            // make it a hidden option, because of compatibility issues
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                setOnPreferenceLongClickListener {
-                    try {
-                        context.startActivity(buildPrimaryStorageIntent("data/rime"))
-                    } catch (e: Exception) {
-                        context.toast(e)
-                    }
+        fun rimeUserDataDir(title: String): Preference = Preference(context).apply {
+            summaryProvider = Preference.SummaryProvider<Preference> {
+                val prefs = AppPrefs.getInstance()
+                val externalPath = prefs.rimeUserDataPath.getValue()
+                if (externalPath.isNotEmpty()) {
+                    context.getString(R.string.rime_user_data_dir_current, externalPath)
+                } else {
+                    context.getString(R.string.rime_user_data_dir_internal)
                 }
+            }
+            setOnPreferenceClickListener {
+                onPickRimeDirectory?.invoke()
+                true
             }
         }
 
@@ -282,7 +271,8 @@ object PreferenceScreenFactory {
         cfg: RawConfig?,
         screen: PreferenceScreen,
         descriptor: ConfigCustom,
-        save: () -> Unit
+        save: () -> Unit,
+        onPickRimeDirectory: (() -> Unit)? = null
     ) {
         val subStore = FcitxRawConfigStore(cfg ?: RawConfig())
         val subPref = PreferenceCategory(context).apply {
@@ -293,7 +283,7 @@ object PreferenceScreenFactory {
         }
         screen.addPreference(subPref)
         descriptor.customTypeDef?.values?.forEach {
-            general(context, fragmentManager, cfg?.findByName(it.name), screen, it, subStore, save)
+            general(context, fragmentManager, cfg?.findByName(it.name), screen, it, subStore, save, onPickRimeDirectory)
         }
     }
 
