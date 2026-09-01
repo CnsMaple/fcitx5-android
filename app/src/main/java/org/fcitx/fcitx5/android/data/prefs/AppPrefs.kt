@@ -22,6 +22,7 @@ import org.fcitx.fcitx5.android.input.keyboard.SpaceLongPressBehavior
 import org.fcitx.fcitx5.android.input.keyboard.SwipeSymbolDirection
 import org.fcitx.fcitx5.android.input.picker.PickerWindow
 import org.fcitx.fcitx5.android.input.popup.EmojiModifier
+import org.fcitx.fcitx5.android.link.ASRKB_CLIPBOARD_SYNC_ENABLED_KEY
 import org.fcitx.fcitx5.android.utils.DeviceUtil
 import org.fcitx.fcitx5.android.utils.appContext
 import org.fcitx.fcitx5.android.utils.vibrator
@@ -175,6 +176,20 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             "space_long_press_behavior",
             SpaceLongPressBehavior.None
         )
+        
+        val voiceInputTapToStop = switch(
+            R.string.voice_input_tap_to_stop,
+            "voice_input_tap_to_stop",
+            false
+        ) { spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInput }
+
+        val asrkbDuckMediaOnRecord = switch(
+            R.string.asrkb_duck_media_on_record,
+            "asrkb_duck_media_on_record",
+            true,
+            R.string.asrkb_duck_media_on_record_summary
+        ) { spaceKeyLongPressBehavior.getValue() == SpaceLongPressBehavior.VoiceInput }
+        
         val spaceSwipeMoveCursor =
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
         val showLangSwitchKey =
@@ -355,6 +370,12 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val clipboardMaskSensitive = switch(
             R.string.clipboard_mask_sensitive, "clipboard_mask_sensitive", true
         ) { clipboardListening.getValue() }
+        val asrkbClipboardSyncEnabled = switch(
+            R.string.asrkb_clipboard_sync_enabled,
+            ASRKB_CLIPBOARD_SYNC_ENABLED_KEY,
+            false,
+            R.string.asrkb_clipboard_sync_enabled_summary
+        )
     }
 
     inner class Symbols : ManagedPreferenceCategory(R.string.emoji_and_symbols, sharedPreferences) {

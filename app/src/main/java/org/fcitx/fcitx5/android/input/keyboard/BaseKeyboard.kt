@@ -24,6 +24,7 @@ import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView.GestureType
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView.OnGestureListener
 import org.fcitx.fcitx5.android.input.popup.PopupAction
 import org.fcitx.fcitx5.android.input.popup.PopupActionListener
+import org.fcitx.fcitx5.android.link.AsrkbSpeechClient
 import splitties.dimensions.dp
 import splitties.views.dsl.constraintlayout.above
 import splitties.views.dsl.constraintlayout.below
@@ -56,6 +57,7 @@ abstract class BaseKeyboard(
     private val swipeSymbolDirection by prefs.keyboard.swipeSymbolDirection
 
     private val spaceSwipeMoveCursor = prefs.keyboard.spaceSwipeMoveCursor
+    private val voiceInputTapToStop = prefs.keyboard.voiceInputTapToStop
     private val spaceKeys = mutableListOf<KeyView>()
     private val spaceSwipeChangeListener = ManagedPreference.OnChangeListener<Boolean> { _, v ->
         spaceKeys.forEach {
@@ -172,6 +174,12 @@ abstract class BaseKeyboard(
                                 true
                             }
                         }
+                        GestureType.Up -> {
+                            if (!(voiceInputTapToStop.getValue() && AsrkbSpeechClient.isHolding())) {
+                                onAction(KeyAction.StopVoiceInputAction)
+                            }
+                            false
+                        }
                         else -> false
                     }
                 }
@@ -202,7 +210,11 @@ abstract class BaseKeyboard(
                 when (it) {
                     is KeyDef.Behavior.Press -> {
                         setOnClickListener { _ ->
-                            onAction(it.action)
+                            if (def is SpaceKey && voiceInputTapToStop.getValue() && AsrkbSpeechClient.isHolding()) {
+                                onAction(KeyAction.StopVoiceInputAction)
+                            } else {
+                                onAction(it.action)
+                            }
                         }
                     }
                     is KeyDef.Behavior.LongPress -> {

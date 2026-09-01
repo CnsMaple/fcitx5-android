@@ -202,6 +202,7 @@
     <string name="space_behavior_enumerate">Enumerate input methods</string>
     <string name="space_behavior_activate">Toggle input method activate state</string>
     <string name="space_behavior_picker">Show input method picker dialog</string>
+    <string name="space_behavior_voice_input">Voice input (AIDL)</string>
     <string name="show_lang_switch_key">Show language switch key</string>
     <string name="horizontal_candidate_style">Horizontal candidate style</string>
     <string name="horizontal_candidate_never_fill">Never fill width</string>
@@ -225,6 +226,21 @@
     <string name="main_program">main program</string>
     <string name="edit_theme">Edit Theme</string>
     <string name="show_voice_input_button">Show voice input button</string>
+    <string name="voice_input_tap_to_stop">Use tap to stop voice input</string>
+    <string name="asrkb_duck_media_on_record">Pause other media while recording</string>
+    <string name="asrkb_duck_media_on_record_summary">While BiBi Keyboard voice input is recording, ask other apps to temporarily lower their volume or pause. The result depends on the system and the media app.</string>
+    <string name="asrkb_clipboard_sync_enabled">Enable BiBi Keyboard clipboard sync</string>
+    <string name="asrkb_clipboard_sync_enabled_summary">Connect to BiBi Keyboard while this IME is active and use its SyncClipboard configuration. Clipboard sync must also be enabled in BiBi Keyboard.</string>
+    <string name="asrkb_clipboard_sync_disabled_notice">Clipboard changes from this IME will no longer sync with BiBi Keyboard.</string>
+    <string name="asrkb_clipboard_sync_status">Connection status</string>
+    <string name="asrkb_clipboard_sync_status_stopped">IME service is not running. Open the keyboard to connect.</string>
+    <string name="asrkb_clipboard_sync_status_disabled">Disabled</string>
+    <string name="asrkb_clipboard_sync_status_waiting">Waiting for the keyboard window</string>
+    <string name="asrkb_clipboard_sync_status_connecting">Connecting (Pro first, then open-source)…</string>
+    <string name="asrkb_clipboard_sync_status_reconnecting">Connection lost; reconnecting…</string>
+    <string name="asrkb_clipboard_sync_status_connected">Connected to %1$s; waiting for sync subscription</string>
+    <string name="asrkb_clipboard_sync_status_observing">Connected to %1$s and observing clipboard changes</string>
+    <string name="asrkb_clipboard_sync_status_error">Last connection failed: %1$s. Codes: 0=service unavailable, -1=update BiBi Keyboard, -2=bad request, -3=caller rejected, -4=current IME mismatch, -5=host rejected, -6=sync disabled, -7=bridge unavailable.</string>
     <string name="fcitx_daemon">Fcitx Daemon</string>
     <string name="restarting_fcitx">Restarting Fcitx</string>
     <string name="plugin_needs_reload">Plugin changes detected, click here to reload</string>
@@ -316,6 +332,13 @@
     <string name="emoji_skin_tone_type_6">🏿 Type-6</string>
     <string name="hide_unsupported_emojis">Hide unsupported Emojis</string>
     <string name="key_border_stroke">Enable stroke for key border</string>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">Voice service is busy. Please try again.</string>
+    <string name="asrkb_err_feature_disabled">Enable "External IME link (AIDL)" in Lexi.</string>
+    <string name="asrkb_client_need_mic_permission">Microphone permission is required for voice input.</string>
+    <string name="asrkb_err_audio_record_failed">Failed to initialize audio recording. Microphone may be in use by another app.</string>
+    <string name="asrkb_err_start_failed_with_code">Failed to start session (code %1$d)</string>
+    <string name="asrkb_err_service_error_with_code">Voice service error (code %1$d)</string>
     <string name="preferred_voice_input">Preferred voice input</string>
     <string name="edit_text_playground">EditText Playground</string>
     <string name="keyboard_height_percent_base">Keyboard height percent base</string>

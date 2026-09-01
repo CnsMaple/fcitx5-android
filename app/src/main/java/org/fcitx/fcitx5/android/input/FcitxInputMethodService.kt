@@ -65,6 +65,8 @@ import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.cursor.CursorRange
 import org.fcitx.fcitx5.android.input.cursor.CursorTracker
+import org.fcitx.fcitx5.android.link.AsrkbClipboardSyncBridge
+import org.fcitx.fcitx5.android.link.AsrkbSpeechClient
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
 import org.fcitx.fcitx5.android.utils.alpha
 import org.fcitx.fcitx5.android.utils.forceShowSelf
@@ -81,6 +83,7 @@ import timber.log.Timber
 import kotlin.math.max
 
 class FcitxInputMethodService : LifecycleInputMethodService() {
+    private val asrkbClipboardSyncBridge by lazy { AsrkbClipboardSyncBridge(this) }
 
     private lateinit var fcitx: FcitxConnection
 
@@ -224,6 +227,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
             }
         }
         super.onCreate()
+        asrkbClipboardSyncBridge.create()
         decorView = window.window!!.decorView
         contentView = decorView.findViewById(android.R.id.content)
         lastKnownConfig = resources.configuration
@@ -389,13 +393,17 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
                 return
             }
             if (actionLabel?.isNotEmpty() == true && actionId != EditorInfo.IME_ACTION_UNSPECIFIED) {
+                AsrkbSpeechClient.onEditorAction()
                 currentInputConnection.performEditorAction(actionId)
                 return
             }
             when (val action = imeOptions and EditorInfo.IME_MASK_ACTION) {
                 EditorInfo.IME_ACTION_UNSPECIFIED,
                 EditorInfo.IME_ACTION_NONE -> sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
-                else -> currentInputConnection.performEditorAction(action)
+                else -> {
+                    AsrkbSpeechClient.onEditorAction()
+                    currentInputConnection.performEditorAction(action)
+                }
             }
         }
     }
@@ -562,9 +570,15 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
 
     override fun onWindowShown() {
         super.onWindowShown()
+        asrkbClipboardSyncBridge.windowShown()
         highlightColor =
             styledColorOrDefault(android.R.attr.colorAccent, DefaultHighlightColor).alpha(0.4f)
         InputFeedbacks.syncSystemPrefs()
+    }
+
+    override fun onWindowHidden() {
+        asrkbClipboardSyncBridge.windowHidden()
+        super.onWindowHidden()
     }
 
     override fun onCreateInputView(): View? {
@@ -725,6 +739,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     override fun onStartInput(attribute: EditorInfo, restarting: Boolean) {
+        AsrkbSpeechClient.onStartInput(attribute, restarting)
         // update selection as soon as possible
         // sometimes when restarting input, onUpdateSelection happens before onStartInput, and
         // initialSel{Start,End} is outdated. but it's the client app's responsibility to send
@@ -796,6 +811,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
             cursorUpdateIndex
         )
         inputView?.updateSelection(newSelStart, newSelEnd)
+        AsrkbSpeechClient.onEditorEvent(this)
     }
 
     private val contentSize = floatArrayOf(0f, 0f)
@@ -1065,6 +1081,7 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
 
     override fun onFinishInput() {
         Timber.d("onFinishInput")
+        AsrkbSpeechClient.onFinishInput()
         postFcitxJob {
             focus(false)
         }
@@ -1084,6 +1101,8 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        AsrkbSpeechClient.onServiceDestroyed(this)
+        asrkbClipboardSyncBridge.destroy()
         recreateInputViewPrefs.forEach {
             it.unregisterOnChangeListener(recreateInputViewListener)
         }

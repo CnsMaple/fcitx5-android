@@ -202,6 +202,7 @@
     <string name="space_behavior_enumerate">轮换输入法</string>
     <string name="space_behavior_activate">在当前输入法和第一个输入法之间切换</string>
     <string name="space_behavior_picker">显示输入法选择对话框</string>
+    <string name="space_behavior_voice_input">语音输入（AIDL）</string>
     <string name="show_lang_switch_key">显示语言切换键</string>
     <string name="horizontal_candidate_style">横向候选词样式</string>
     <string name="horizontal_candidate_never_fill">从不填充宽度</string>
@@ -225,6 +226,21 @@
     <string name="main_program">主程序</string>
     <string name="edit_theme">编辑主题</string>
     <string name="show_voice_input_button">显示语音输入按钮</string>
+    <string name="voice_input_tap_to_stop">使用点按控制语音输入</string>
+    <string name="asrkb_duck_media_on_record">录音时暂停其他媒体</string>
+    <string name="asrkb_duck_media_on_record_summary">使用说点啥语音输入录音时，请求其他应用暂时降低音量或暂停播放。实际效果取决于系统和播放应用。</string>
+    <string name="asrkb_clipboard_sync_enabled">启用说点啥粘贴板同步</string>
+    <string name="asrkb_clipboard_sync_enabled_summary">本输入法活动时连接说点啥，并使用本体的 SyncClipboard 配置。还需在说点啥中启用剪贴板同步。</string>
+    <string name="asrkb_clipboard_sync_disabled_notice">本输入法的剪贴板变化将不再同步到说点啥。</string>
+    <string name="asrkb_clipboard_sync_status">连接状态</string>
+    <string name="asrkb_clipboard_sync_status_stopped">输入法服务未运行，请打开键盘后连接。</string>
+    <string name="asrkb_clipboard_sync_status_disabled">未启用</string>
+    <string name="asrkb_clipboard_sync_status_waiting">正在等待键盘窗口显示</string>
+    <string name="asrkb_clipboard_sync_status_connecting">正在连接（Pro 优先，然后开源版）…</string>
+    <string name="asrkb_clipboard_sync_status_reconnecting">连接已断开，正在重连…</string>
+    <string name="asrkb_clipboard_sync_status_connected">已连接 %1$s，正在等待同步订阅</string>
+    <string name="asrkb_clipboard_sync_status_observing">已连接 %1$s，正在监听剪贴板变化</string>
+    <string name="asrkb_clipboard_sync_status_error">最近一次连接失败：%1$s。错误码：0=服务不可用，-1=需更新说点啥，-2=请求无效，-3=调用方被拒绝，-4=当前输入法不匹配，-5=宿主被拒绝，-6=未启用同步，-7=桥接不可用。</string>
     <string name="fcitx_daemon">Fcitx 守护程序</string>
     <string name="restarting_fcitx">正在重新启动 Fcitx</string>
     <string name="plugin_needs_reload">检测到插件更改，点此重新加载</string>
@@ -316,6 +332,13 @@
     <string name="emoji_skin_tone_type_6">🏿 深肤色 (Type-6)</string>
     <string name="hide_unsupported_emojis">隐藏不支持的表情</string>
     <string name="key_border_stroke">启用按键边框描边</string>
+    <!-- Yanxi AIDL linkage error messages -->
+    <string name="asrkb_err_busy">语音服务正忙，请稍后再试。</string>
+    <string name="asrkb_err_feature_disabled">请先在言犀中开启"允许外部输入法联动（AIDL）"。</string>
+    <string name="asrkb_client_need_mic_permission">小企鹅需要麦克风权限以进行语音输入。</string>
+    <string name="asrkb_err_audio_record_failed">音频录制初始化失败，麦克风可能被其他应用占用。</string>
+    <string name="asrkb_err_start_failed_with_code">启动会话失败（错误码 %1$d）</string>
+    <string name="asrkb_err_service_error_with_code">语音服务错误（错误码 %1$d）</string>
     <string name="preferred_voice_input">首选语音输入</string>
     <string name="edit_text_playground">文本输入框 (EditText) 演练场</string>
     <string name="keyboard_height_percent_base">键盘高度百分比</string>
