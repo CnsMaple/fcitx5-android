@@ -57,12 +57,17 @@ class SyncClipboard(baseUrl: String, private val user: String, private val pass:
             }
             val body = resp.body.string().removePrefix("\uFEFF")
             val o = JSONObject(body)
+            // SyncClipboard.json has no "hasData" field: an attached file is signalled by a
+            // non-null dataName (+size). Derive hasData from dataName so real desktop pushes
+            // (Image/File) are recognized instead of falling back to the text/path branch.
+            val dataName = if (o.isNull("dataName")) null
+                else o.optString("dataName", "").takeIf { it.isNotEmpty() }
             return Meta(
                 type = o.optString("type", "Text"),
                 hash = o.optString("hash", ""),
                 text = o.optString("text", ""),
-                hasData = o.optBoolean("hasData", false),
-                dataName = if (o.isNull("dataName")) null else o.optString("dataName", null).takeIf { it.isNotEmpty() },
+                hasData = dataName != null,
+                dataName = dataName,
                 size = o.optLong("size", 0),
             )
         }

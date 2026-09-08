@@ -6,11 +6,14 @@ package org.fcitx.fcitx5.android.data.clipboard.db
 
 import android.content.ClipData
 import android.content.ClipDescription
+import android.content.Context
 import android.os.Build
 import androidx.room.ColumnInfo
 import androidx.room.Entity
 import androidx.room.PrimaryKey
 import org.fcitx.fcitx5.android.utils.timestamp
+import java.io.File
+import java.security.MessageDigest
 
 @Entity(tableName = ClipboardEntry.TABLE_NAME)
 data class ClipboardEntry(
@@ -74,6 +77,12 @@ data class ClipboardEntry(
                 sensitive = sensitive,
                 uri = uriStr
             )
+        }
+
+        // locally cached thumbnail for a media clip, keyed by its original uri
+        fun thumbFile(context: Context, uri: String): File {
+            val h = MessageDigest.getInstance("SHA-1").digest(uri.toByteArray()).joinToString("") { "%02x".format(it) }
+            return File(context.filesDir, "clip_thumbs/$h.png")
         }
     }
 }

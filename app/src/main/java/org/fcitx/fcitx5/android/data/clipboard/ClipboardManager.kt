@@ -6,6 +6,9 @@ package org.fcitx.fcitx5.android.data.clipboard
 
 import android.content.ClipboardManager
 import android.content.Context
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
+import android.net.Uri
 import android.os.Build
 import androidx.annotation.Keep
 import androidx.room.Room
@@ -26,6 +29,7 @@ import org.fcitx.fcitx5.android.utils.WeakHashSet
 import org.fcitx.fcitx5.android.utils.appContext
 import org.fcitx.fcitx5.android.utils.clipboardManager
 import timber.log.Timber
+import java.io.FileOutputStream
 
 object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
     CoroutineScope by CoroutineScope(SupervisorJob() + Dispatchers.Default) {
@@ -185,11 +189,35 @@ object ClipboardManager : ClipboardManager.OnPrimaryClipChangedListener,
                     }
                     updateLastEntry(insertedEntry)
                     updateItemCount()
+                    maybeCacheThumb(insertedEntry)
                 } catch (exception: Exception) {
                     Timber.w("Failed to update clipboard database: $exception")
                     updateLastEntry(entry)
                 }
             }
+        }
+    }
+
+    // Decode + persist a small png while the clip's content grant is still alive,
+    // so the history panel can render a thumbnail later (clip uri grants are ephemeral).
+    private fun maybeCacheThumb(entry: ClipboardEntry) {
+        if (!entry.isImage) return
+        val file = ClipboardEntry.thumbFile(appContext, entry.uri)
+        if (file.exists()) return
+        val uri = Uri.parse(entry.uri)
+        launch {
+            runCatching {
+                val resolver = appContext.contentResolver
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                resolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+                var sample = 1
+                while (bounds.outWidth / sample > 512 || bounds.outHeight / sample > 512) sample *= 2
+                val bmp = resolver.openInputStream(uri)?.use {
+                    BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+                } ?: return@runCatching
+                file.parentFile?.mkdirs()
+                FileOutputStream(file).use { bmp.compress(Bitmap.CompressFormat.PNG, 90, it) }
+            }.onFailure { Timber.w("clip thumb cache failed: $it") }
         }
     }
 

@@ -301,9 +301,12 @@ class ClipSyncClient(private val context: Context) {
         return ok
     }
 
-    /** Copy an image uri onto the clipboard (persistable read grant for content uris). */
+    /** Copy an image uri onto the clipboard with an explicit mime. */
     fun copyImage(uri: Uri, mime: String) {
-        context.clipboardManager.setPrimaryClip(ClipData.newUri(context.contentResolver, "image", uri))
+        // Build ClipData with the known mime instead of ClipData.newUri: FileProvider.getType
+        // returns null for names with spaces / non-ascii / uppercase ext, which would leave the
+        // clip as "*/*" and break the history thumbnail (isImage detection).
+        context.clipboardManager.setPrimaryClip(ClipData("image", arrayOf(mime), ClipData.Item(uri)))
         toast("已复制图片")
     }
 

@@ -14,6 +14,7 @@ import android.net.Uri
 import android.text.TextUtils
 import android.view.View
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.input.keyboard.CustomGestureView
 import splitties.dimensions.dp
@@ -108,13 +109,19 @@ class ClipboardEntryUi(override val ctx: Context, private val theme: Theme, radi
         }
     }
 
-    private fun decodeThumb(uri: Uri): android.graphics.Bitmap? = runCatching {
-        val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-        ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
-        var sample = 1
-        while (bounds.outWidth / sample > 400 || bounds.outHeight / sample > 400) sample *= 2
-        ctx.contentResolver.openInputStream(uri)?.use {
-            BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+    private fun decodeThumb(uri: Uri): android.graphics.Bitmap? {
+        runCatching {
+            val f = ClipboardEntry.thumbFile(ctx, uri.toString())
+            if (f.exists()) BitmapFactory.decodeFile(f.absolutePath)?.let { return it }
         }
-    }.getOrNull()
+        return runCatching {
+            val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+            ctx.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it, null, bounds) }
+            var sample = 1
+            while (bounds.outWidth / sample > 400 || bounds.outHeight / sample > 400) sample *= 2
+            ctx.contentResolver.openInputStream(uri)?.use {
+                BitmapFactory.decodeStream(it, null, BitmapFactory.Options().apply { inSampleSize = sample })
+            }
+        }.getOrNull()
+    }
 }
