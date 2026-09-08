@@ -106,10 +106,28 @@ private fun runRimeFlow(context: Context, title: Int, block: suspend (phase: (In
             runCatching { block { phase -> text?.post { text.setText(phase) } } }
         }
         if (activity != null && !activity.isFinishing && !activity.isDestroyed) dialog?.dismiss()
-        rimeToast(context, result.fold(
-            { context.getString(R.string.rime_webdav_done) },
-            { context.getString(R.string.rime_webdav_failed, it.message ?: "?") },
-        ))
+        rimeToast(context, when {
+            rimeCancel.get() -> context.getString(R.string.rime_webdav_cancelled)
+            result.isSuccess -> context.getString(R.string.rime_webdav_done)
+            else -> context.getString(R.string.rime_webdav_failed, rimeFailReason(context, result.exceptionOrNull()!!))
+        })
+    }
+}
+
+// Map a flow failure to a Chinese reason; never surface the raw (English) exception text.
+private fun rimeFailReason(context: Context, t: Throwable): String {
+    val msg = t.message ?: ""
+    val code = Regex("HTTP (\\d{3})").find(msg)?.groupValues?.get(1)
+    return when {
+        t is java.net.UnknownHostException -> context.getString(R.string.rime_webdav_err_host)
+        code != null -> when (code) {
+            "401", "403" -> context.getString(R.string.rime_webdav_err_auth)
+            "404" -> context.getString(R.string.rime_webdav_err_notfound)
+            else -> context.getString(R.string.rime_webdav_err_http, code)
+        }
+        msg.contains("empty") -> context.getString(R.string.rime_webdav_err_empty)
+        t is java.io.IOException -> context.getString(R.string.rime_webdav_err_net)
+        else -> context.getString(R.string.rime_webdav_err_generic)
     }
 }
 

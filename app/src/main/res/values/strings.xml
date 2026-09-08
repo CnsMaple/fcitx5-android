@@ -375,6 +375,14 @@
     <string name="rime_webdav_pushing">Pushing to WebDAV…</string>
     <string name="rime_webdav_done">WebDAV sync finished</string>
     <string name="rime_webdav_failed">WebDAV sync failed: %1$s</string>
+    <string name="rime_webdav_cancelled">Cancelled</string>
+    <string name="rime_webdav_err_host">Cannot resolve the server address</string>
+    <string name="rime_webdav_err_net">Network connection failed</string>
+    <string name="rime_webdav_err_auth">Authentication failed (check username / password)</string>
+    <string name="rime_webdav_err_notfound">Remote folder not found (check the address)</string>
+    <string name="rime_webdav_err_http">Server error (HTTP %1$s)</string>
+    <string name="rime_webdav_err_empty">Remote snapshot is empty, upload one first</string>
+    <string name="rime_webdav_err_generic">Unknown error</string>
     <string name="rime_backup">Backup</string>
     <string name="rime_restore">Restore</string>
     <string name="rime_push">Upload snapshot</string>
