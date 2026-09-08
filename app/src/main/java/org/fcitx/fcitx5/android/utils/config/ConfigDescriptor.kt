@@ -184,6 +184,7 @@ sealed class ConfigDescriptor<T, U> : Parcelable {
             TableGlobal,
             PinyinCustomPhrase,
             RimeUserDataDir,
+            RimeWebDavSync,
 
             // manually added on Android side for TableManager
             AndroidTable
@@ -325,6 +326,7 @@ sealed class ConfigDescriptor<T, U> : Parcelable {
                                 "TableGlobal" -> ConfigExternal.ETy.TableGlobal
                                 "CustomPhrase" -> ConfigExternal.ETy.PinyinCustomPhrase
                                 "UserDataDir" -> ConfigExternal.ETy.RimeUserDataDir
+                                "WebDavSync" -> ConfigExternal.ETy.RimeWebDavSync
                                 "AndroidTable" -> ConfigExternal.ETy.AndroidTable
                                 else -> null
                             }

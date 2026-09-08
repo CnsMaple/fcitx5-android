@@ -84,6 +84,15 @@ sealed class SettingsRoute : Parcelable {
     data object Plugin : SettingsRoute()
 
     @Serializable
+    data object CloudVoice : SettingsRoute()
+
+    @Serializable
+    data object ClipSync : SettingsRoute()
+
+    @Serializable
+    data object RimeWebDav : SettingsRoute()
+
+    @Serializable
     data object Advanced : SettingsRoute()
 
     @Serializable
@@ -221,6 +230,15 @@ sealed class SettingsRoute : Parcelable {
             }
             fragment<PluginFragment, Plugin> {
                 label = ctx.getString(R.string.plugins)
+            }
+            fragment<CloudVoiceSettingsFragment, CloudVoice> {
+                label = ctx.getString(R.string.cloud_voice_title)
+            }
+            fragment<ClipSyncSettingsFragment, ClipSync> {
+                label = ctx.getString(R.string.clip_sync_title)
+            }
+            fragment<RimeWebDavFragment, RimeWebDav> {
+                label = ctx.getString(R.string.rime_webdav_title)
             }
             fragment<AdvancedSettingsFragment, Advanced> {
                 label = ctx.getString(R.string.advanced)

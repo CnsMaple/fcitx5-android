@@ -172,6 +172,12 @@ abstract class BaseKeyboard(
                                 true
                             }
                         }
+                        GestureType.Up -> {
+                            // push-to-talk: ending the voice session on release is a
+                            // no-op unless a session is active, so it's safe to always fire
+                            onAction(KeyAction.StopVoiceInputAction)
+                            false
+                        }
                         else -> false
                     }
                 }
@@ -179,7 +185,7 @@ abstract class BaseKeyboard(
                 swipeEnabled = true
                 swipeRepeatEnabled = true
                 swipeThresholdX = selectionSwipeThreshold
-                swipeThresholdY = disabledSwipeThreshold
+                swipeThresholdY = dp(40f)
                 onGestureListener = OnGestureListener { view, event ->
                     when (event.type) {
                         GestureType.Move -> {
@@ -191,7 +197,13 @@ abstract class BaseKeyboard(
                             } else false
                         }
                         GestureType.Up -> {
-                            onAction(KeyAction.DeleteSelectionAction(event.totalX))
+                            // vertical swipe wins over horizontal selection when dominant
+                            if (kotlin.math.abs(event.totalY) > kotlin.math.abs(event.totalX)) {
+                                onAction(if (event.totalY < 0) KeyAction.ClearAllAction
+                                         else KeyAction.UndoClearAction)
+                            } else {
+                                onAction(KeyAction.DeleteSelectionAction(event.totalX))
+                            }
                             false
                         }
                         else -> false

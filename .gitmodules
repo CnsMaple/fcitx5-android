@@ -24,19 +24,19 @@
 	path = plugin/unikey/src/main/cpp/fcitx5-unikey
 	url = https://github.com/fcitx/fcitx5-unikey.git
 [submodule "plugin/rime/src/main/cpp/fcitx5-rime"]
-	path = plugin/rime/src/main/cpp/fcitx5-rime
-	url = https://github.com/fcitx/fcitx5-rime.git
+	path = app/src/main/cpp/rime/fcitx5-rime
+	url = https://github.com/CnsMaple/fcitx5-rime.git
 [submodule "plugin/rime/src/main/cpp/rime-prelude"]
-	path = plugin/rime/src/main/cpp/rime-prelude
+	path = app/src/main/cpp/rime/rime-prelude
 	url = https://github.com/rime/rime-prelude.git
 [submodule "plugin/rime/src/main/cpp/rime-essay"]
-	path = plugin/rime/src/main/cpp/rime-essay
+	path = app/src/main/cpp/rime/rime-essay
 	url = https://github.com/rime/rime-essay.git
 [submodule "plugin/rime/src/main/cpp/rime-luna-pinyin"]
-	path = plugin/rime/src/main/cpp/rime-luna-pinyin
+	path = app/src/main/cpp/rime/rime-luna-pinyin
 	url = https://github.com/rime/rime-luna-pinyin.git
 [submodule "plugin/rime/src/main/cpp/rime-stroke"]
-	path = plugin/rime/src/main/cpp/rime-stroke
+	path = app/src/main/cpp/rime/rime-stroke
 	url = https://github.com/rime/rime-stroke.git
 [submodule "plugin/hangul/src/main/cpp/fcitx5-hangul"]
 	path = plugin/hangul/src/main/cpp/fcitx5-hangul

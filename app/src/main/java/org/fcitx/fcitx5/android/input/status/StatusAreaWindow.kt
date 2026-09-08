@@ -26,14 +26,26 @@ import org.fcitx.fcitx5.android.input.dependency.fcitx
 import org.fcitx.fcitx5.android.input.dependency.inputMethodService
 import org.fcitx.fcitx5.android.input.dependency.theme
 import org.fcitx.fcitx5.android.input.editorinfo.EditorInfoWindow
+import org.fcitx.fcitx5.android.input.keyboard.FloatingKeyboardMode
+import org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow
+import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.ClipSync
+import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.FloatingKeyboard
 import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.InputMethod
 import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.Keyboard
 import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.ReloadConfig
+import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.RimeWebDav
 import org.fcitx.fcitx5.android.input.status.StatusAreaEntry.Android.Type.ThemeList
 import org.fcitx.fcitx5.android.input.wm.InputWindow
 import org.fcitx.fcitx5.android.input.wm.InputWindowManager
+import org.fcitx.fcitx5.android.data.clipboard.ClipSyncClient
 import org.fcitx.fcitx5.android.utils.AppUtil
 import org.fcitx.fcitx5.android.utils.DeviceUtil
+import org.fcitx.fcitx5.android.utils.rimeBackup
+import org.fcitx.fcitx5.android.utils.rimePlainSync
+import org.fcitx.fcitx5.android.utils.rimePull
+import org.fcitx.fcitx5.android.utils.rimePush
+import org.fcitx.fcitx5.android.utils.rimeRestore
+import org.fcitx.fcitx5.android.utils.rimeSyncWithFallback
 import org.fcitx.fcitx5.android.utils.alpha
 import org.mechdancer.dependency.manager.must
 import splitties.dimensions.dp
@@ -56,7 +68,7 @@ class StatusAreaWindow : InputWindow.ExtendedInputWindow<StatusAreaWindow>(),
     private val editorInfoInspector by AppPrefs.getInstance().internal.editorInfoInspector
 
     private val staticEntries by lazy {
-        arrayOf(
+        val base = arrayOf(
             StatusAreaEntry.Android(
                 context.getString(R.string.theme),
                 R.drawable.ic_baseline_palette_24,
@@ -76,14 +88,81 @@ class StatusAreaWindow : InputWindow.ExtendedInputWindow<StatusAreaWindow>(),
                 context.getString(R.string.virtual_keyboard),
                 R.drawable.ic_baseline_keyboard_24,
                 Keyboard
+            ),
+            StatusAreaEntry.Android(
+                context.getString(R.string.rime_webdav_title),
+                R.drawable.ic_baseline_cloud_24,
+                RimeWebDav
+            ),
+            StatusAreaEntry.Android(
+                context.getString(R.string.floating_keyboard),
+                R.drawable.ic_floating_keyboard_24,
+                FloatingKeyboard
             )
+        )
+        // clipboard sync is built into the app now, so the entry is always available
+        base + StatusAreaEntry.Android(
+            context.getString(R.string.clip_sync_title),
+            R.drawable.ic_clipboard,
+            ClipSync
         )
     }
 
     private fun activateAction(action: Action) {
+        // rime's toolbar "Synchronize" -> full WebDAV pull/sync/push when configured
+        if (action.name == "fcitx-rime-sync") {
+            rimeSyncWithFallback(context)
+            return
+        }
         fcitx.launchOnReady {
             it.activateAction(action.id)
         }
+    }
+
+    private fun popup(anchor: View, items: List<Pair<String, () -> Unit>>) {
+        val popup = PopupMenu(context, anchor)
+        items.forEachIndexed { i, (label, action) ->
+            popup.menu.add(0, i, i, label).setOnMenuItemClickListener { action(); true }
+        }
+        popupMenu?.dismiss()
+        popupMenu = popup
+        popup.show()
+    }
+
+    private fun clip(action: (ClipSyncClient) -> Unit) {
+        // close the status-area grid so the keyboard (and its progress overlay) shows immediately
+        windowManager.attachWindow(KeyboardWindow)
+        val c = ClipSyncClient.current
+        if (c == null) Toast.makeText(context, R.string.clip_sync_not_installed, Toast.LENGTH_SHORT).show()
+        else action(c)
+    }
+
+    private fun showClipSyncPopup(anchor: View) = popup(anchor, listOf(
+        context.getString(R.string.clip_sync_upload_clipboard) to { clip { it.pushCurrentClip(notify = true) } },
+        context.getString(R.string.clip_sync_upload_file) to { clip { ClipSyncClient.pick(context, "File") } },
+        context.getString(R.string.clip_sync_upload_image) to { clip { ClipSyncClient.pick(context, "Image") } },
+        context.getString(R.string.clip_sync_download) to { clip { it.pullOnce(notify = true, force = true) } },
+    ))
+
+    private fun showRimeWebDavPopup(anchor: View) = popup(anchor, listOf(
+        context.getString(R.string.rime_backup) to { rimeBackup(context) },
+        context.getString(R.string.rime_restore) to { rimeRestore(context) },
+        context.getString(R.string.rime_push) to { rimePush(context) },
+        context.getString(R.string.rime_pull) to { rimePull(context) },
+        context.getString(R.string.rime_webdav_plain_sync) to { rimePlainSync(context) },
+    ))
+
+    private fun toggleFloatingKeyboard() {
+        val pref = AppPrefs.getInstance().keyboard.floatingKeyboardMode
+        val enable = pref.getValue() == FloatingKeyboardMode.Off
+        pref.setValue(if (enable) FloatingKeyboardMode.Always else FloatingKeyboardMode.Off)
+        // close the status-area grid so the keyboard re-lays out with the new mode right away
+        windowManager.attachWindow(KeyboardWindow)
+        Toast.makeText(
+            context,
+            if (enable) R.string.floating_keyboard_enabled else R.string.floating_keyboard_disabled,
+            Toast.LENGTH_SHORT
+        ).show()
     }
 
     var popupMenu: PopupMenu? = null
@@ -152,6 +231,9 @@ class StatusAreaWindow : InputWindow.ExtendedInputWindow<StatusAreaWindow>(),
                         }
                         Keyboard -> AppUtil.launchMainToKeyboard(context)
                         ThemeList -> AppUtil.launchMainToThemeList(context)
+                        ClipSync -> showClipSyncPopup(view)
+                        RimeWebDav -> showRimeWebDavPopup(view)
+                        FloatingKeyboard -> toggleFloatingKeyboard()
                     }
                 }
             }

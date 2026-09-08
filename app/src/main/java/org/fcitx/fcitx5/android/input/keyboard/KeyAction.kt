@@ -40,4 +40,16 @@ sealed class KeyAction {
     data class PickerSwitchAction(val key: PickerWindow.Key? = null) : KeyAction()
 
     data object SpaceLongPressAction : KeyAction()
+
+    /** Fired when the Return key is long-pressed; behavior chosen by preference. */
+    data object EnterLongPressAction : KeyAction()
+
+    /** Swipe up on Backspace: select-all + clear the field (undoable). */
+    data object ClearAllAction : KeyAction()
+
+    /** Swipe down on Backspace: restore the last cleared text. */
+    data object UndoClearAction : KeyAction()
+
+    /** Fired when the space key is released; ends a push-to-talk voice session. */
+    data object StopVoiceInputAction : KeyAction()
 }

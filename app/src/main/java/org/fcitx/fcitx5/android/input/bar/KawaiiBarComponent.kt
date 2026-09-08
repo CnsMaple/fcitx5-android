@@ -30,6 +30,7 @@ import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.CapabilityFlag
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxEvent.CandidateListEvent
+import org.fcitx.fcitx5.android.data.clipboard.ClipSyncClient
 import org.fcitx.fcitx5.android.data.clipboard.ClipboardManager
 import org.fcitx.fcitx5.android.data.clipboard.db.ClipboardEntry
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
@@ -126,10 +127,11 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
                 if (it.text.isEmpty()) {
                     isClipboardFresh = false
                 } else {
-                    idleUi.clipboardUi.text.text = if (it.sensitive && clipboardMaskSensitive) {
-                        ClipboardEntry.BULLET.repeat(min(42, it.text.length))
-                    } else {
-                        it.text.take(42)
+                    idleUi.clipboardUi.text.text = when {
+                        it.isImage -> service.getString(R.string.clip_suggest_image)
+                        it.sensitive && clipboardMaskSensitive ->
+                            ClipboardEntry.BULLET.repeat(min(42, it.text.length))
+                        else -> it.text.take(42)
                     }
                     isClipboardFresh = true
                     launchClipboardTimeoutJob()
@@ -310,7 +312,8 @@ class KawaiiBarComponent : UniqueViewComponent<KawaiiBarComponent, FrameLayout>(
             clipboardUi.suggestionView.apply {
                 setOnClickListener {
                     ClipboardManager.lastEntry?.let {
-                        service.commitText(it.text)
+                        if (it.isImage) ClipSyncClient.current?.showClipboardImagePanel(it.uri, it.type)
+                        else service.commitText(it.text)
                     }
                     clipboardTimeoutJob?.cancel()
                     clipboardTimeoutJob = null

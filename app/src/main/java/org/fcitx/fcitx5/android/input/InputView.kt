@@ -8,14 +8,19 @@ package org.fcitx.fcitx5.android.input
 import android.annotation.SuppressLint
 import android.content.res.Configuration
 import android.graphics.Point
+import android.graphics.drawable.GradientDrawable
 import android.os.Build
+import android.view.Gravity
+import android.view.MotionEvent
 import android.view.View
 import android.view.WindowInsets
 import android.view.inputmethod.EditorInfo
 import android.view.inputmethod.InlineSuggestionsResponse
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.annotation.Keep
 import androidx.annotation.RequiresApi
+import androidx.core.graphics.ColorUtils
 import androidx.core.view.updateLayoutParams
 import org.fcitx.fcitx5.android.core.CapabilityFlags
 import org.fcitx.fcitx5.android.core.FcitxEvent
@@ -32,6 +37,7 @@ import org.fcitx.fcitx5.android.input.broadcast.PunctuationComponent
 import org.fcitx.fcitx5.android.input.broadcast.ReturnKeyDrawableComponent
 import org.fcitx.fcitx5.android.input.candidates.horizontal.HorizontalCandidateComponent
 import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener
+import org.fcitx.fcitx5.android.input.keyboard.FloatingKeyboardMode
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardHeightPercentBase.DisplayMetrics
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardHeightPercentBase.RealSize
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow
@@ -144,6 +150,13 @@ class InputView(
     private val advancedPrefs = AppPrefs.getInstance().advanced
     private val keyboardHeightPercentBase = advancedPrefs.keyboardHeightPercentBase
 
+    private val floatingKeyboardMode = keyboardPrefs.floatingKeyboardMode
+    private val floatingKeyboardWidth = keyboardPrefs.floatingKeyboardWidth
+    private val usePortraitSizeInLandscape = keyboardPrefs.usePortraitSizeInLandscape
+    private val internalPrefs = AppPrefs.getInstance().internal
+    private val floatingKeyboardX = internalPrefs.floatingKeyboardX
+    private val floatingKeyboardY = internalPrefs.floatingKeyboardY
+
     private val keyboardSizePrefs = listOf(
         keyboardHeightPercent,
         keyboardHeightPercentLandscape,
@@ -152,13 +165,52 @@ class InputView(
         keyboardBottomPadding,
         keyboardBottomPaddingLandscape,
         keyboardHeightPercentBase,
+        floatingKeyboardMode,
+        floatingKeyboardWidth,
+        usePortraitSizeInLandscape,
     )
+
+    private var navInsetBottom = 0
+    private val floatHandleH = dp(28)
+    private var dragStartX = 0f
+    private var dragStartY = 0f
+    private var dragStartLeft = 0
+    private var dragStartTop = 0
+
+    // grab handle shown at the top of the card in floating mode; drag it to move the keyboard
+    private val dragHandle = FrameLayout(themedContext).apply {
+        val bar = View(themedContext)
+        bar.background = GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(2).toFloat()
+            setColor(ColorUtils.setAlphaComponent(theme.keyTextColor, 90))
+        }
+        addView(bar, FrameLayout.LayoutParams(dp(44), dp(4), Gravity.CENTER))
+        visibility = View.GONE
+        setOnTouchListener { _, e -> onHandleTouch(e) }
+    }
+
+    // IME's configuration.orientation is unreliable here; judge by actual metrics aspect
+    private fun isLandscape(): Boolean {
+        val dm = resources.displayMetrics
+        return dm.widthPixels > dm.heightPixels
+    }
+
+    // use landscape-specific size params, unless "portrait size in landscape" is enabled
+    private fun useLandscapeSize(): Boolean =
+        isLandscape() && !usePortraitSizeInLandscape.getValue()
+
+    // in landscape but told to use the portrait keyboard size -> compute width/height from the
+    // portrait axes (height base = long edge, card width base = short edge) instead of landscape's
+    private fun sizeAsPortrait(): Boolean = isLandscape() && usePortraitSizeInLandscape.getValue()
 
     private val keyboardHeightPx: Int
         get() {
             val baseType = keyboardHeightPercentBase.getValue()
+            val dm = resources.displayMetrics
             val base = when (baseType) {
-                DisplayMetrics -> resources.displayMetrics.heightPixels
+                DisplayMetrics ->
+                    if (sizeAsPortrait()) maxOf(dm.widthPixels, dm.heightPixels) else dm.heightPixels
                 RealSize -> Point().also {
                     @Suppress("DEPRECATION")
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -166,31 +218,22 @@ class InputView(
                     } else {
                         context.windowManager.defaultDisplay
                     }.getRealSize(it)
-                }.y
+                }.let { if (sizeAsPortrait()) maxOf(it.x, it.y) else it.y }
             }
-            val percent = when (resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> keyboardHeightPercentLandscape
-                else -> keyboardHeightPercent
-            }.getValue()
+            val percent = (if (useLandscapeSize()) keyboardHeightPercentLandscape else keyboardHeightPercent).getValue()
             Timber.d("keyboardHeightPx get(): baseType=${baseType}, base=${base}, percent=${percent}")
             return base * percent / 100
         }
 
     private val keyboardSidePaddingPx: Int
         get() {
-            val value = when (resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> keyboardSidePaddingLandscape
-                else -> keyboardSidePadding
-            }.getValue()
+            val value = (if (useLandscapeSize()) keyboardSidePaddingLandscape else keyboardSidePadding).getValue()
             return dp(value)
         }
 
     private val keyboardBottomPaddingPx: Int
         get() {
-            val value = when (resources.configuration.orientation) {
-                Configuration.ORIENTATION_LANDSCAPE -> keyboardBottomPaddingLandscape
-                else -> keyboardBottomPadding
-            }.getValue()
+            val value = (if (useLandscapeSize()) keyboardBottomPaddingLandscape else keyboardBottomPadding).getValue()
             return dp(value)
         }
 
@@ -260,8 +303,11 @@ class InputView(
                 bottomOfParent()
             })
         }
-
-        updateKeyboardSize()
+        keyboardView.addView(dragHandle, LayoutParams(0, floatHandleH).apply {
+            startToStart = LayoutParams.PARENT_ID
+            endToEnd = LayoutParams.PARENT_ID
+            topToTop = LayoutParams.PARENT_ID
+        })
 
         add(preedit.ui.root, lParams(matchParent, wrapContent) {
             above(keyboardView)
@@ -276,18 +322,25 @@ class InputView(
             centerHorizontally()
         })
 
+        updateKeyboardSize()
+
         keyboardPrefs.registerOnChangeListener(onKeyboardSizeChangeListener)
         advancedPrefs.registerOnChangeListener(onKeyboardSizeChangeListener)
     }
 
     private fun updateKeyboardSize() {
         windowManager.view.updateLayoutParams {
-            height = keyboardHeightPx
+            // floating: scale the keyboard body height by the same factor as the card width,
+            // so the whole keyboard keeps its original aspect ratio (no distortion)
+            height = if (isFloating())
+                keyboardHeightPx * floatingKeyboardWidth.getValue() / 100
+            else keyboardHeightPx
         }
-        bottomPaddingSpace.updateLayoutParams {
-            height = keyboardBottomPaddingPx
+        bottomPaddingSpace.updateLayoutParams<LayoutParams> {
+            height = if (isFloating()) 0 else keyboardBottomPaddingPx
+            bottomMargin = if (isFloating()) 0 else navInsetBottom
         }
-        val sidePadding = keyboardSidePaddingPx
+        val sidePadding = if (isFloating()) 0 else keyboardSidePaddingPx
         if (sidePadding == 0) {
             // hide side padding space views when unnecessary
             leftPaddingSpace.visibility = GONE
@@ -316,13 +369,139 @@ class InputView(
         }
         preedit.ui.root.setPadding(sidePadding, 0, sidePadding, 0)
         kawaiiBar.view.setPadding(sidePadding, 0, sidePadding, 0)
+        applyCardMode()
     }
 
     override fun onApplyWindowInsets(insets: WindowInsets): WindowInsets {
-        bottomPaddingSpace.updateLayoutParams<LayoutParams> {
-            bottomMargin = getNavBarBottomInset(insets)
-        }
+        navInsetBottom = getNavBarBottomInset(insets)
+        updateKeyboardSize()
         return insets
+    }
+
+    /** Exposed to [FcitxInputMethodService.onComputeInsets] for the touchable region. */
+    fun isFloatingKeyboard() = isFloating()
+
+    private fun isFloating(): Boolean = when (floatingKeyboardMode.getValue()) {
+        FloatingKeyboardMode.Off -> false
+        FloatingKeyboardMode.Always -> true
+        FloatingKeyboardMode.Landscape ->
+            isLandscape()
+    }
+
+    private fun floatingCardWidth(parentW: Int): Int {
+        val baseW = if (sizeAsPortrait())
+            minOf(resources.displayMetrics.widthPixels, resources.displayMetrics.heightPixels)
+        else parentW
+        return baseW * floatingKeyboardWidth.getValue() / 100
+    }
+
+    private fun applyCardMode() {
+        // keyboardView has no LayoutParams until it is added to this view; skip until then
+        if (keyboardView.layoutParams == null) return
+        val floating = isFloating()
+        val parentW = width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+        val cardW = floatingCardWidth(parentW)
+        val savedX = floatingKeyboardX.getValue()
+        val savedY = floatingKeyboardY.getValue()
+        keyboardView.updateLayoutParams<LayoutParams> {
+            if (floating) {
+                width = cardW
+                // horizontal: centered by default, absolute margin only after a drag
+                startToStart = LayoutParams.PARENT_ID
+                endToEnd = LayoutParams.PARENT_ID
+                horizontalBias = 0.5f
+                leftMargin = 0
+                if (savedX >= 0) {
+                    endToEnd = LayoutParams.UNSET
+                    horizontalBias = 0f
+                    leftMargin = savedX.coerceIn(0, (parentW - cardW).coerceAtLeast(0))
+                }
+                // vertical: near the bottom by default, absolute margin only after a drag
+                topToTop = LayoutParams.UNSET
+                bottomToBottom = LayoutParams.PARENT_ID
+                verticalBias = 1f
+                topMargin = 0
+                if (savedY >= 0) {
+                    bottomToBottom = LayoutParams.UNSET
+                    topToTop = LayoutParams.PARENT_ID
+                    verticalBias = 0f
+                    val cardH = keyboardView.height
+                    topMargin = savedY.coerceIn(0, (height - cardH - navInsetBottom).coerceAtLeast(0))
+                }
+            } else {
+                width = LayoutParams.MATCH_PARENT
+                startToStart = LayoutParams.PARENT_ID
+                endToEnd = LayoutParams.PARENT_ID
+                topToTop = LayoutParams.UNSET
+                bottomToBottom = LayoutParams.PARENT_ID
+                horizontalBias = 0.5f
+                verticalBias = 1f
+                leftMargin = 0
+                topMargin = 0
+            }
+        }
+        kawaiiBar.view.updateLayoutParams<LayoutParams> {
+            topMargin = if (floating) floatHandleH else 0
+        }
+        val bgColor = if (theme is Theme.Builtin)
+            theme.keyboardColor else theme.backgroundColor
+        keyboardView.background = if (floating) GradientDrawable().apply {
+            shape = GradientDrawable.RECTANGLE
+            cornerRadius = dp(16).toFloat()
+            setColor(bgColor)
+        } else null
+        keyboardView.elevation = if (floating) dp(8).toFloat() else 0f
+        dragHandle.visibility = if (floating) View.VISIBLE else View.GONE
+        customBackground.visibility = if (floating) View.GONE else View.VISIBLE
+    }
+
+    private fun onHandleTouch(e: MotionEvent): Boolean {
+        val lp = keyboardView.layoutParams as? LayoutParams ?: return false
+        val parentW = width.takeIf { it > 0 } ?: resources.displayMetrics.widthPixels
+        val parentH = height.takeIf { it > 0 } ?: resources.displayMetrics.heightPixels
+        when (e.actionMasked) {
+            MotionEvent.ACTION_DOWN -> {
+                dragStartX = e.rawX
+                dragStartY = e.rawY
+                val loc = IntArray(2)
+                keyboardView.getLocationInWindow(loc)
+                dragStartLeft = loc[0]
+                dragStartTop = loc[1]
+                // switch the card from bias-centering to absolute margins so the drag takes effect
+                keyboardView.updateLayoutParams<LayoutParams> {
+                    startToStart = LayoutParams.PARENT_ID
+                    endToEnd = LayoutParams.UNSET
+                    horizontalBias = 0f
+                    topToTop = LayoutParams.PARENT_ID
+                    bottomToBottom = LayoutParams.UNSET
+                    verticalBias = 0f
+                    leftMargin = loc[0]
+                    topMargin = loc[1]
+                }
+                return true
+            }
+            MotionEvent.ACTION_MOVE -> {
+                val cardW = keyboardView.width.takeIf { it > 0 } ?: floatingCardWidth(parentW)
+                val cardH = keyboardView.height
+                val nx = (dragStartLeft + (e.rawX - dragStartX)).toInt()
+                    .coerceIn(0, (parentW - cardW).coerceAtLeast(0))
+                val ny = (dragStartTop + (e.rawY - dragStartY)).toInt()
+                    .coerceIn(0, (parentH - cardH - navInsetBottom).coerceAtLeast(0))
+                keyboardView.updateLayoutParams<LayoutParams> {
+                    leftMargin = nx
+                    topMargin = ny
+                }
+                // ponytail: insets recompute rides on the relayout; may lag ~1 frame on fast drags
+                requestLayout()
+                return true
+            }
+            MotionEvent.ACTION_UP, MotionEvent.ACTION_CANCEL -> {
+                floatingKeyboardX.setValue(lp.leftMargin)
+                floatingKeyboardY.setValue(lp.topMargin)
+                return true
+            }
+        }
+        return false
     }
 
     /**
@@ -334,6 +513,11 @@ class InputView(
         if (focusChangeResetKeyboard || !restarting) {
             windowManager.attachWindow(KeyboardWindow)
         }
+    }
+
+    /** Run [block] on the keyboard window when it's available (voice overlay etc). */
+    fun withKeyboardWindow(block: KeyboardWindow.() -> Unit) {
+        (windowManager.getEssentialWindow(KeyboardWindow) as? KeyboardWindow)?.block()
     }
 
     override fun onStartHandleFcitxEvent() {

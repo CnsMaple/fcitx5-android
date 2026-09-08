@@ -9,6 +9,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.launch
 import org.fcitx.fcitx5.android.core.FcitxAPI
+import org.fcitx.fcitx5.android.core.FcitxKeyMapping
 import org.fcitx.fcitx5.android.daemon.launchOnReady
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.input.broadcast.PreeditEmptyStateComponent
@@ -22,7 +23,10 @@ import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.Backspace
 import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.BackspaceSwipeState.Selection
 import org.fcitx.fcitx5.android.input.keyboard.CommonKeyActionListener.BackspaceSwipeState.Stopped
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.CommitAction
+import org.fcitx.fcitx5.android.input.keyboard.KeyAction.ClearAllAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.DeleteSelectionAction
+import org.fcitx.fcitx5.android.input.keyboard.KeyAction.EnterLongPressAction
+import org.fcitx.fcitx5.android.input.keyboard.KeyAction.UndoClearAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.FcitxKeyAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.LangSwitchAction
 import org.fcitx.fcitx5.android.input.keyboard.KeyAction.MoveSelectionAction
@@ -60,6 +64,7 @@ class CommonKeyActionListener :
     private val kbdPrefs = AppPrefs.getInstance().keyboard
 
     private val spaceKeyLongPressBehavior by kbdPrefs.spaceKeyLongPressBehavior
+    private val enterKeyLongPressBehavior by kbdPrefs.enterKeyLongPressBehavior
     private val langSwitchKeyBehavior by kbdPrefs.langSwitchKeyBehavior
 
     private var backspaceSwipeState = Stopped
@@ -94,6 +99,17 @@ class CommonKeyActionListener :
                     sendKey(action.act, action.states.states, action.code)
                 }
                 is SymAction -> service.postFcitxJob {
+                    // clamp preedit cursor at its ends so swiping the space bar past the
+                    // boundary doesn't wrap around to the other side (fcitx loops internally)
+                    val s = action.sym.sym
+                    if (s == FcitxKeyMapping.FcitxKey_Left || s == FcitxKeyMapping.FcitxKey_Right) {
+                        val pre = inputPanelCached?.preedit
+                        if (pre != null && pre.cursor >= 0 && pre.isNotEmpty()) {
+                            val atEnd = s == FcitxKeyMapping.FcitxKey_Right && pre.cursor >= pre.length
+                            val atStart = s == FcitxKeyMapping.FcitxKey_Left && pre.cursor == 0
+                            if (atEnd || atStart) return@postFcitxJob
+                        }
+                    }
                     sendKey(action.sym, action.states)
                 }
                 is CommitAction -> service.postFcitxJob {
@@ -180,8 +196,20 @@ class CommonKeyActionListener :
                             toggleIme()
                         }
                         SpaceLongPressBehavior.ShowPicker -> showInputMethodPicker()
+                        SpaceLongPressBehavior.VoiceInput -> service.cloudVoiceClient.startHold()
                     }
                 }
+                is KeyAction.StopVoiceInputAction -> service.cloudVoiceClient.stopHold()
+                is EnterLongPressAction -> when (enterKeyLongPressBehavior) {
+                    EnterLongPressBehavior.None -> {}
+                    EnterLongPressBehavior.Emoji -> ContextCompat.getMainExecutor(service).execute {
+                        windowManager.attachWindow(PickerWindow.Key.Emoji)
+                    }
+                    EnterLongPressBehavior.Newline -> service.sendEnterNewline()
+                    EnterLongPressBehavior.Send -> service.performEnterAction()
+                }
+                is ClearAllAction -> service.clearAllText()
+                is UndoClearAction -> service.undoClearText()
                 else -> {}
             }
         }

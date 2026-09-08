@@ -65,6 +65,7 @@ import org.fcitx.fcitx5.android.data.theme.Theme
 import org.fcitx.fcitx5.android.data.theme.ThemeManager
 import org.fcitx.fcitx5.android.input.cursor.CursorRange
 import org.fcitx.fcitx5.android.input.cursor.CursorTracker
+import org.fcitx.fcitx5.android.input.voice.CloudVoiceClient
 import org.fcitx.fcitx5.android.utils.InputMethodUtil
 import org.fcitx.fcitx5.android.utils.alpha
 import org.fcitx.fcitx5.android.utils.forceShowSelf
@@ -96,6 +97,19 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     private var lastMetaState: Int = 0
 
     private lateinit var pkgNameCache: PackageNameCache
+
+    /** Cloud voice input client, lazily created on first space long-press. */
+    val cloudVoiceClient: CloudVoiceClient by lazy { CloudVoiceClient(this) }
+
+    /** Clipboard sync client (WebDAV via clipsync plugin). */
+    val clipSyncClient: org.fcitx.fcitx5.android.data.clipboard.ClipSyncClient by lazy {
+        org.fcitx.fcitx5.android.data.clipboard.ClipSyncClient(this)
+    }
+
+    /** Apply [block] to the keyboard window on the main thread (voice overlay). */
+    fun withKeyboardWindow(block: org.fcitx.fcitx5.android.input.keyboard.KeyboardWindow.() -> Unit) {
+        inputView?.withKeyboardWindow(block)
+    }
 
     private lateinit var decorView: View
     private lateinit var contentView: FrameLayout
@@ -400,6 +414,44 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
         }
     }
 
+    /** Enter long-press = newline: insert a literal line break (bypass fcitx key routing). */
+    fun sendEnterNewline() {
+        currentInputConnection?.commitText("\n", 1)
+    }
+
+    /** Enter long-press = send: perform the target app's editor action. */
+    fun performEnterAction() {
+        val info = currentInputEditorInfo ?: return
+        val labeled = info.actionLabel?.isNotEmpty() == true &&
+                info.actionId != EditorInfo.IME_ACTION_UNSPECIFIED
+        val mask = info.imeOptions and EditorInfo.IME_MASK_ACTION
+        val action = if (labeled) info.actionId else mask
+        if (action != EditorInfo.IME_ACTION_UNSPECIFIED && action != EditorInfo.IME_ACTION_NONE) {
+            currentInputConnection?.performEditorAction(action)
+        } else {
+            sendDownUpKeyEvents(KeyEvent.KEYCODE_ENTER)
+        }
+    }
+
+    private var clearedText: CharSequence? = null
+
+    /** Backspace swipe up: select-all + clear, keeping a copy for undo. */
+    fun clearAllText() {
+        val ic = currentInputConnection ?: return
+        ic.performContextMenuAction(android.R.id.selectAll)
+        val all = ic.getSelectedText(0)
+        if (all != null && all.isNotEmpty()) {
+            clearedText = all
+            ic.commitText("", 1)
+        }
+    }
+
+    /** Backspace swipe down: restore the last cleared text. */
+    fun undoClearText() {
+        val ic = currentInputConnection ?: return
+        clearedText?.let { ic.commitText(it, 1); clearedText = null }
+    }
+
     private fun handleArrowKey(keyCode: Int) {
         val type = currentInputEditorInfo.inputType and InputType.TYPE_MASK_CLASS
         val variation = currentInputEditorInfo.inputType and InputType.TYPE_MASK_VARIATION
@@ -569,6 +621,9 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
 
     override fun onCreateInputView(): View? {
         replaceInputViews(ThemeManager.activeTheme)
+        val prefs = AppPrefs.getInstance().internal
+        clipSyncClient.applyAuto(prefs.clipSyncAuto.getValue(), prefs.clipSyncInterval.getValue())
+        clipSyncClient.start()
         // We will call `setInputView` by ourselves. This is fine.
         return null
     }
@@ -598,7 +653,26 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     private var inputViewLocation = intArrayOf(0, 0)
 
     override fun onComputeInsets(outInsets: Insets) {
-        if (inputDeviceMgr.isVirtualKeyboard) {
+        val kv = inputView?.keyboardView
+        val floating = inputDeviceMgr.isVirtualKeyboard &&
+            kv != null && inputView?.isFloatingKeyboard() == true
+        if (floating && kv != null) {
+            // floating card: only the card itself is touchable, everything else passes through,
+            // and app content is never resized (keyboard truly "floats" over it)
+            kv.getLocationInWindow(inputViewLocation)
+            val l = inputViewLocation[0]
+            val t = inputViewLocation[1]
+            val n = decorView.findViewById<View>(android.R.id.navigationBarBackground)?.height ?: 0
+            val h = decorView.height - n
+            outInsets.apply {
+                // keep contentTop == visibleTop so app content is never resized (true float);
+                // the card's touchable area is defined solely by touchableRegion below
+                contentTopInsets = h
+                visibleTopInsets = h
+                touchableInsets = Insets.TOUCHABLE_INSETS_REGION
+                touchableRegion.set(l, t, l + kv.width, t + kv.height)
+            }
+        } else if (inputDeviceMgr.isVirtualKeyboard) {
             inputView?.keyboardView?.getLocationInWindow(inputViewLocation)
             outInsets.apply {
                 contentTopInsets = inputViewLocation[1]
@@ -1084,6 +1158,8 @@ class FcitxInputMethodService : LifecycleInputMethodService() {
     }
 
     override fun onDestroy() {
+        cloudVoiceClient.stopAndHide()
+        clipSyncClient.stop()
         recreateInputViewPrefs.forEach {
             it.unregisterOnChangeListener(recreateInputViewListener)
         }

@@ -18,6 +18,8 @@ import org.fcitx.fcitx5.android.input.candidates.floating.FloatingCandidatesOrie
 import org.fcitx.fcitx5.android.input.candidates.horizontal.HorizontalCandidateMode
 import org.fcitx.fcitx5.android.input.keyboard.KeyboardHeightPercentBase
 import org.fcitx.fcitx5.android.input.keyboard.LangSwitchBehavior
+import org.fcitx.fcitx5.android.input.keyboard.EnterLongPressBehavior
+import org.fcitx.fcitx5.android.input.keyboard.FloatingKeyboardMode
 import org.fcitx.fcitx5.android.input.keyboard.SpaceLongPressBehavior
 import org.fcitx.fcitx5.android.input.keyboard.SwipeSymbolDirection
 import org.fcitx.fcitx5.android.input.picker.PickerWindow
@@ -36,6 +38,29 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
         val pid = int("pid", 0)
         val editorInfoInspector = bool("editor_info_inspector", false)
         val needNotifications = bool("need_notifications", true)
+        // custom rime user data dir; empty means the default <data>/rime
+        val rimeUserDataDir = string("rime_user_data_dir", "")
+        // rime WebDAV default sync switch (toolbar sync does pull->sync->push when on)
+        val rimeWebDavAuto = bool("rime_webdav_auto", false)
+        // rime WebDAV server config (dedicated config page)
+        val rimeWebDavUrl = string("rime_webdav_url", "")
+        val rimeWebDavUser = string("rime_webdav_user", "")
+        val rimeWebDavPass = string("rime_webdav_pass", "")
+        // directory to persist downloaded non-text clipboard files (empty = app cache)
+        val clipSyncDownloadDir = string("clip_sync_download_dir", "")
+        // clipboard WebDAV auto-sync (configured on the WebDAV sub-page, not the clipboard page)
+        val clipSyncAuto = bool("clip_sync_auto", false)
+        val clipSyncInterval = int("clip_sync_interval", 30)
+        // rime snapshot root: holds current/ and history/<ts>/ (abs path, SAF tree)
+        val rimeBackupDir = string("rime_backup_dir", "")
+        // newline-separated globs, relative to the rime user dir
+        val rimeBackupPatterns = string(
+            "rime_backup_patterns",
+            "sync/**/*.userdb.txt\n*.custom.yaml\ncustom_phrase.txt\ndefault.yaml"
+        )
+        // floating keyboard card position in px (-1 = unset, auto-center)
+        val floatingKeyboardX = int("floating_kb_x", -1)
+        val floatingKeyboardY = int("floating_kb_y", -1)
     }
 
     inner class Advanced : ManagedPreferenceCategory(R.string.advanced, sharedPreferences) {
@@ -175,6 +200,11 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             "space_long_press_behavior",
             SpaceLongPressBehavior.None
         )
+        val enterKeyLongPressBehavior = enumList(
+            R.string.enter_long_press_behavior,
+            "enter_long_press_behavior",
+            EnterLongPressBehavior.Newline
+        )
         val spaceSwipeMoveCursor =
             switch(R.string.space_swipe_move_cursor, "space_swipe_move_cursor", true)
         val showLangSwitchKey =
@@ -244,6 +274,26 @@ class AppPrefs(private val sharedPreferences: SharedPreferences) {
             keyboardBottomPadding = primary
             keyboardBottomPaddingLandscape = secondary
         }
+
+        val usePortraitSizeInLandscape = switch(
+            R.string.use_portrait_size_in_landscape,
+            "use_portrait_size_in_landscape",
+            true
+        )
+
+        val floatingKeyboardMode = enumList(
+            R.string.floating_keyboard,
+            "floating_keyboard_mode",
+            FloatingKeyboardMode.Landscape
+        )
+        val floatingKeyboardWidth = int(
+            R.string.floating_keyboard_width,
+            "floating_keyboard_width",
+            75,
+            40,
+            92,
+            "%"
+        ) { floatingKeyboardMode.getValue() != FloatingKeyboardMode.Off }
 
         val horizontalCandidateStyle = enumList(
             R.string.horizontal_candidate_style,

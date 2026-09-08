@@ -110,6 +110,11 @@ class MainFragment : PaddingPreferenceFragment() {
                     SettingsRoute.Symbol
                 )
                 addDestinationPreference(
+                    R.string.cloud_voice_title,
+                    R.drawable.ic_baseline_cloud_24,
+                    SettingsRoute.CloudVoice
+                )
+                addDestinationPreference(
                     R.string.plugins,
                     R.drawable.ic_baseline_android_24,
                     SettingsRoute.Plugin

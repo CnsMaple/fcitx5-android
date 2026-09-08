@@ -12,7 +12,12 @@
         tools:node="remove" />
 
     <uses-permission android:name="android.permission.VIBRATE" />
+    <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- cloud voice input: the IME process captures audio while the keyboard is foreground -->
+    <uses-permission android:name="android.permission.RECORD_AUDIO" />
+    <!-- All files access: lets the native rime engine use a user-picked folder under /storage/emulated/0 -->
+    <uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" />
 
     <!-- remove intent queries merged from library manifest (namely Android-Image-Cropper) -->
     <queries tools:node="removeAll" />
@@ -23,6 +28,14 @@
         </intent>
         <intent>
             <action android:name="android.view.InputMethod" />
+        </intent>
+        <!-- cloud voice input provider plugins -->
+        <intent>
+            <action android:name="org.fcitx.fcitx5.android.plugin.VOICE_INPUT" />
+        </intent>
+        <!-- clipboard sync provider plugins -->
+        <intent>
+            <action android:name="org.fcitx.fcitx5.android.plugin.CLIP_SYNC" />
         </intent>
     </queries>
 
@@ -65,6 +78,10 @@
         <activity
             android:name=".ui.main.CropImageActivity"
             android:exported="false" />
+        <activity
+            android:name=".data.clipboard.ClipPickerActivity"
+            android:exported="false"
+            android:theme="@android:style/Theme.Translucent.NoTitleBar" />
         <activity
             android:name=".ui.main.MainActivity"
             android:exported="true"
@@ -155,6 +172,17 @@
             <intent-filter>
                 <action android:name="android.content.action.DOCUMENTS_PROVIDER" />
             </intent-filter>
+        </provider>
+
+        <!-- clipboard sync: share downloaded image/file via content URI -->
+        <provider
+            android:name="androidx.core.content.FileProvider"
+            android:authorities="${applicationId}.clipprovider"
+            android:exported="false"
+            android:grantUriPermissions="true">
+            <meta-data
+                android:name="android.support.FILE_PROVIDER_PATHS"
+                android:resource="@xml/clip_file_paths" />
         </provider>
 
         <!-- remove unneeded components from com.canhub.cropper -->

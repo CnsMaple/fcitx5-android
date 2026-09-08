@@ -50,3 +50,18 @@ fun buildDocumentsProviderIntent(): Intent {
     val uri = DocumentsContract.buildRootUri("${BuildConfig.APPLICATION_ID}.provider", "files")
     return Intent(Intent.ACTION_VIEW, uri)
 }
+
+/** Convert a primary-storage tree URI (from OpenDocumentTree) to a real file path. */
+fun treeUriToRealPath(uri: Uri): String? {
+    val docId = try {
+        DocumentsContract.getTreeDocumentId(uri)
+    } catch (e: Exception) {
+        null
+    } ?: return null
+    val parts = docId.split(':', limit = 2)
+    if (parts.size != 2 || parts[0] != "primary") return null
+    return android.os.Environment.getExternalStorageDirectory().let { root ->
+        if (parts[1].isEmpty()) root.absolutePath
+        else java.io.File(root, parts[1]).absolutePath
+    }
+}

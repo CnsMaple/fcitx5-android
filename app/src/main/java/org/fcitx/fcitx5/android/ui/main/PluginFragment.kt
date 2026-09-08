@@ -16,21 +16,29 @@ import android.os.Build
 import android.os.Bundle
 import android.provider.Settings
 import androidx.lifecycle.lifecycleScope
+import androidx.fragment.app.activityViewModels
 import androidx.preference.PreferenceScreen
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
+import org.fcitx.fcitx5.android.common.ipc.VoiceInputIpc
 import org.fcitx.fcitx5.android.core.data.DataManager
 import org.fcitx.fcitx5.android.core.data.FileSource
 import org.fcitx.fcitx5.android.core.data.PluginLoadFailed
 import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.ui.common.PaddingPreferenceFragment
+import org.fcitx.fcitx5.android.ui.main.settings.SettingsRoute
 import org.fcitx.fcitx5.android.utils.addCategory
 import org.fcitx.fcitx5.android.utils.addPreference
+import org.fcitx.fcitx5.android.utils.navigateWithAnim
 
 class PluginFragment : PaddingPreferenceFragment() {
 
     private var firstRun = true
+
+    private val viewModel: MainViewModel by activityViewModels()
 
     private lateinit var synced: DataManager.PluginSet
     private lateinit var detected: DataManager.PluginSet
@@ -131,7 +139,14 @@ class PluginFragment : PaddingPreferenceFragment() {
                     isIconSpaceReserved = false
                     loaded.forEach {
                         addPreference(it.name, "${it.versionName}\n${it.description}") {
-                            startPluginAboutActivity(it.packageName)
+                            when {
+                                isVoiceProvider(it.packageName) ->
+                                    navigateWithAnim(SettingsRoute.CloudVoice)
+                                isClipProvider(it.packageName) ->
+                                    navigateWithAnim(SettingsRoute.ClipSync)
+                                it.packageName.contains(".plugin.rime") -> openRimeConfig()
+                                else -> startPluginAboutActivity(it.packageName)
+                            }
                         }
                     }
                 }
@@ -171,6 +186,34 @@ class PluginFragment : PaddingPreferenceFragment() {
                 }
             }
         }
+
+    /** Jump to the rime addon config page (where the user data dir setting lives). */
+    private fun openRimeConfig() {
+        lifecycleScope.launch {
+            val name = withContext(Dispatchers.IO) {
+                viewModel.fcitx.runOnReady { addons() }
+                    .firstOrNull { it.uniqueName == "rime" }?.displayName
+            } ?: "RIME"
+            navigateWithAnim(SettingsRoute.AddonConfig(name, "rime"))
+        }
+    }
+
+    /** Does this package expose the cloud voice provider service? */
+    private fun isVoiceProvider(pkg: String): Boolean {
+        val pm = requireContext().packageManager
+        @Suppress("DEPRECATION")
+        return pm.queryIntentServices(
+            Intent(VoiceInputIpc.SERVICE_ACTION), PackageManager.MATCH_ALL
+        ).any { it.serviceInfo.packageName == pkg }
+    }
+
+    private fun isClipProvider(pkg: String): Boolean {
+        val pm = requireContext().packageManager
+        @Suppress("DEPRECATION")
+        return pm.queryIntentServices(
+            Intent("org.fcitx.fcitx5.android.plugin.CLIP_SYNC"), PackageManager.MATCH_ALL
+        ).any { it.serviceInfo.packageName == pkg }
+    }
 
     private fun startPluginAboutActivity(pkg: String): Boolean {
         val ctx = requireContext()

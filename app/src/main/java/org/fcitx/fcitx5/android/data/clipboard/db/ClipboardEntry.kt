@@ -25,8 +25,13 @@ data class ClipboardEntry(
     @ColumnInfo(defaultValue = "0")
     val deleted: Boolean = false,
     @ColumnInfo(defaultValue = "0")
-    val sensitive: Boolean = false
+    val sensitive: Boolean = false,
+    @ColumnInfo(defaultValue = "")
+    val uri: String = ""
 ) {
+    // computed (no backing field) so Room ignores it
+    val isImage: Boolean get() = uri.isNotEmpty() && type.startsWith("image/")
+
     companion object {
         const val BULLET = "•"
 
@@ -45,17 +50,29 @@ data class ClipboardEntry(
             val desc = clipData.description
             // TODO: handle multiple items (when does this happen?)
             val item = clipData.getItemAt(0) ?: return null
-            val str = item.text?.toString() ?: return null
+            val clipUri = item.uri
             val sensitive = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
                 desc.extras?.getBoolean(IS_SENSITIVE) ?: false
             } else {
                 false
             }
+            val text: String
+            val uriStr: String
+            if (clipUri != null) {
+                val name = clipUri.lastPathSegment?.substringAfterLast('/') ?: ""
+                text = if (desc.hasMimeType("image/*")) "图片 $name" else "文件 $name"
+                uriStr = clipUri.toString()
+            } else {
+                val t = item.text?.toString() ?: return null
+                text = if (transformer != null) transformer(t) else t
+                uriStr = ""
+            }
             return ClipboardEntry(
-                text = if (transformer != null) transformer(str) else str,
+                text = text,
                 timestamp = clipData.timestamp(),
                 type = desc.getMimeType(0),
-                sensitive = sensitive
+                sensitive = sensitive,
+                uri = uriStr
             )
         }
     }

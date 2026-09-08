@@ -514,6 +514,7 @@ Java_org_fcitx_fcitx5_android_core_Fcitx_startupFcitx(
         jstring appLib,
         jstring extData,
         jstring extCache,
+        jstring rimeUserDir,
         jobjectArray extDomains) {
     if (Fcitx::Instance().isRunning()) {
         FCITX_ERROR() << "Fcitx is already running!";
@@ -526,6 +527,7 @@ Java_org_fcitx_fcitx5_android_core_Fcitx_startupFcitx(
     auto appLib_ = CString(env, appLib);
     auto extData_ = CString(env, extData);
     auto extCache_ = CString(env, extCache);
+    auto rimeUserDir_ = CString(env, rimeUserDir);
 
     const std::string lang_ = fcitx::stringutils::split(*locale_, ":")[0];
     const std::string config_home = fcitx::stringutils::joinPath(*extData_, "config");
@@ -578,6 +580,8 @@ Java_org_fcitx_fcitx5_android_core_Fcitx_startupFcitx(
     setenv("XDG_RUNTIME_DIR", extCache_, 1);
     setenv("LUA_PATH", lua_path.c_str(), 1);
     setenv("LUA_CPATH", lua_cpath.c_str(), 1);
+    // rime user data dir override; empty string means use the default
+    setenv("FCITX_RIME_USER_DATA_DIR", rimeUserDir_, 1);
 
     const char *locale_dir_char = locale_dir.c_str();
     fcitx::registerDomain("fcitx5", locale_dir_char);

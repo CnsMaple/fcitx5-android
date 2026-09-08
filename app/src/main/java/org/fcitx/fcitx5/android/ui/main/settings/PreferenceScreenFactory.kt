@@ -6,9 +6,21 @@ package org.fcitx.fcitx5.android.ui.main.settings
 
 import android.app.AlertDialog
 import android.content.Context
+import android.content.Intent
+import android.net.Uri
 import android.os.Build
+import android.os.Environment
+import android.provider.DocumentsContract
+import android.provider.Settings
+import android.widget.LinearLayout
+import android.widget.ProgressBar
+import android.widget.TextView
+import androidx.activity.ComponentActivity
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentManager
+import androidx.lifecycle.lifecycleScope
 import androidx.preference.DialogPreference
 import androidx.preference.EditTextPreference
 import androidx.preference.ListPreference
@@ -19,9 +31,16 @@ import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceManager
 import androidx.preference.PreferenceScreen
 import arrow.core.getOrElse
+import java.io.File
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import org.fcitx.fcitx5.android.R
 import org.fcitx.fcitx5.android.core.Key
 import org.fcitx.fcitx5.android.core.RawConfig
+import org.fcitx.fcitx5.android.core.syncRimeUserData
+import org.fcitx.fcitx5.android.daemon.FcitxDaemon
 import org.fcitx.fcitx5.android.data.prefs.AppPrefs
 import org.fcitx.fcitx5.android.ui.main.modified.MySwitchPreference
 import org.fcitx.fcitx5.android.utils.LongClickPreference
@@ -38,6 +57,7 @@ import org.fcitx.fcitx5.android.utils.config.ConfigDescriptor.ConfigKey
 import org.fcitx.fcitx5.android.utils.config.ConfigDescriptor.ConfigList
 import org.fcitx.fcitx5.android.utils.config.ConfigDescriptor.ConfigString
 import org.fcitx.fcitx5.android.utils.config.ConfigType
+import org.fcitx.fcitx5.android.utils.loadingSpinner
 import org.fcitx.fcitx5.android.utils.navigateWithAnim
 import org.fcitx.fcitx5.android.utils.parcelableArray
 import org.fcitx.fcitx5.android.utils.toast
@@ -133,23 +153,200 @@ object PreferenceScreenFactory {
         }
 
         fun rimeUserDataDir(title: String): Preference = LongClickPreference(context).apply {
+            val pref = AppPrefs.getInstance().internal.rimeUserDataDir
+
+            fun updateSummary() {
+                summary = pref.getValue().ifEmpty {
+                    context.getString(R.string.rime_user_data_dir_default)
+                }
+            }
+
+            fun hasRecentActivity(dir: File, t0: Long): Boolean = runCatching {
+                dir.walkTopDown().any { it.isFile && it.lastModified() >= t0 }
+            }.getOrDefault(false)
+
+            // Loading the rime addon makes RimeEngine construct itself, which
+            // starts librime maintenance (deploy) automatically in the new dir.
+            fun showRedeployDialog(path: String) {
+                val activity = context as? ComponentActivity ?: return
+                val target = if (path.isEmpty())
+                    File(activity.getExternalFilesDir(null) ?: activity.filesDir, "data/rime")
+                else File(path)
+                val t0 = System.currentTimeMillis()
+                val conn = FcitxDaemon.getFirstConnectionOrNull()
+                if (conn != null) {
+                    activity.lifecycleScope.launch {
+                        runCatching { conn.runOnReady { getAddonConfig("rime") } }
+                    }
+                }
+
+                val dp = activity.resources.displayMetrics.density
+                val text = TextView(activity).apply {
+                    setText(R.string.rime_deploying)
+                    setPadding((12 * dp).toInt(), 0, 0, 0)
+                }
+                val layout = LinearLayout(activity).apply {
+                    orientation = LinearLayout.HORIZONTAL
+                    gravity = android.view.Gravity.CENTER_VERTICAL
+                    setPadding((24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt(), (24 * dp).toInt())
+                    addView(loadingSpinner(activity))
+                    addView(text)
+                }
+                val dialog = AlertDialog.Builder(context)
+                    .setTitle(R.string.rime_redeploy_title)
+                    .setView(layout)
+                    .setCancelable(false)
+                    .show()
+
+                activity.lifecycleScope.launch {
+                    // librime touches user.yaml at the end of every maintenance
+                    // (full deploy or no-op); build/default.yaml only when rebuilt.
+                    val userYaml = File(target, "user.yaml")
+                    val defaultYaml = File(target, "build/default.yaml")
+                    var elapsed = 0L
+                    while (elapsed < 600_000L) {
+                        delay(1000)
+                        elapsed += 1000
+                        if (activity.isFinishing || activity.isDestroyed) {
+                            dialog.dismiss()
+                            return@launch
+                        }
+                        if (userYaml.exists() && userYaml.lastModified() >= t0) {
+                            text.setText(
+                                if (defaultYaml.exists() && defaultYaml.lastModified() >= t0)
+                                    R.string.rime_deploy_done
+                                else
+                                    R.string.rime_deploy_uptodate
+                            )
+                            delay(1500)
+                            dialog.dismiss()
+                            return@launch
+                        }
+                        // maintenance never started writing after a while: nothing to do
+                        if (elapsed > 30_000 && !hasRecentActivity(target, t0)) {
+                            text.setText(R.string.rime_deploy_uptodate)
+                            delay(1500)
+                            dialog.dismiss()
+                            return@launch
+                        }
+                    }
+                    text.setText(R.string.rime_deploy_timeout)
+                    dialog.setCancelable(true)
+                }
+            }
+
+            fun restartWithDir(path: String) {
+                pref.setValue(path)
+                updateSummary()
+                FcitxDaemon.restartFcitx()
+                showRedeployDialog(path)
+            }
+
+            // Only trees on the primary shared storage map to a real POSIX path
+            // that librime (native) can use.
+            fun treeUriToRealPath(uri: Uri): String? {
+                if (uri.host != "com.android.externalstorage.documents") return null
+                val docId = uri.pathSegments.getOrNull(1) ?: return null
+                val parts = docId.split(":", limit = 2)
+                if (parts.size != 2 || parts[0] != "primary") return null
+                return File(Environment.getExternalStorageDirectory(), parts[1]).absolutePath
+            }
+
+            fun launchTreePicker(activity: ComponentActivity) {
+                lateinit var picker: ActivityResultLauncher<Uri?>
+                picker = activity.activityResultRegistry.register(
+                    "rimePickDir", ActivityResultContracts.OpenDocumentTree()
+                ) { uri: Uri? ->
+                    picker.unregister()
+                    if (uri == null) return@register
+                    val real = treeUriToRealPath(uri)
+                    if (real == null) {
+                        context.toast(R.string.rime_user_data_dir_unsupported)
+                    } else {
+                        runCatching {
+                            activity.contentResolver.takePersistableUriPermission(
+                                uri,
+                                Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                                        Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                            )
+                        }
+                        restartWithDir(real)
+                    }
+                }
+                picker.launch(null)
+            }
+
+            fun pickDir() {
+                val activity = context as? ComponentActivity ?: return
+                if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+                    context.toast(R.string.rime_user_data_dir_need_android_11)
+                    return
+                }
+                if (Environment.isExternalStorageManager()) {
+                    launchTreePicker(activity)
+                } else {
+                    context.toast(R.string.rime_user_data_dir_need_permission)
+                    lateinit var permLauncher: ActivityResultLauncher<Intent>
+                    permLauncher = activity.activityResultRegistry.register(
+                        "rimeManageStorage", ActivityResultContracts.StartActivityForResult()
+                    ) {
+                        permLauncher.unregister()
+                        if (Environment.isExternalStorageManager()) launchTreePicker(activity)
+                    }
+                    permLauncher.launch(
+                        Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+                            .setData(Uri.parse("package:${activity.packageName}"))
+                    )
+                }
+            }
+
+            fun openCurrentDir() {
+                try {
+                    val custom = pref.getValue()
+                    if (custom.isEmpty()) {
+                        context.startActivity(buildDocumentsProviderIntent())
+                    } else {
+                        val rel = custom.removePrefix(
+                            Environment.getExternalStorageDirectory().absolutePath + "/"
+                        )
+                        context.startActivity(
+                            Intent(
+                                Intent.ACTION_VIEW,
+                                DocumentsContract.buildTreeDocumentUri(
+                                    "com.android.externalstorage.documents",
+                                    "primary:$rel"
+                                )
+                            )
+                        )
+                    }
+                } catch (e: Exception) {
+                    context.toast(e)
+                }
+            }
+
+            updateSummary()
             setOnPreferenceClickListener {
                 AlertDialog.Builder(context)
                     .setTitle(title)
-                    .setMessage(R.string.open_rime_user_data_dir)
-                    .setNegativeButton(android.R.string.cancel, null)
-                    .setPositiveButton(android.R.string.ok) { _, _ ->
-                        try {
-                            context.startActivity(buildDocumentsProviderIntent())
-                        } catch (e: Exception) {
-                            context.toast(e)
+                    .setItems(
+                        arrayOf(
+                            context.getString(R.string.rime_user_data_dir_change),
+                            context.getString(R.string.rime_user_data_dir_reset),
+                            context.getString(R.string.rime_user_data_dir_open)
+                        )
+                    ) { _, which ->
+                        when (which) {
+                            0 -> pickDir()
+                            1 -> if (pref.getValue().isNotEmpty()) restartWithDir("")
+                            2 -> openCurrentDir()
                         }
                     }
+                    .setNegativeButton(android.R.string.cancel, null)
                     .show()
                 true
             }
 
-            // make it a hidden option, because of compatibility issues
+            // keep the original hidden entry to the default dir
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
                 setOnPreferenceLongClickListener {
                     try {
@@ -158,6 +355,15 @@ object PreferenceScreenFactory {
                         context.toast(e)
                     }
                 }
+            }
+        }
+
+        fun rimeWebDavSync(title: String): Preference = Preference(context).apply {
+            this.title = context.getString(R.string.rime_webdav_config_entry)
+            summary = context.getString(R.string.rime_webdav_config_entry_summary)
+            setOnPreferenceClickListener {
+                navigate(SettingsRoute.RimeWebDav)
+                true
             }
         }
 
@@ -218,6 +424,9 @@ object PreferenceScreenFactory {
                 ConfigExternal.ETy.AndroidTable -> tableInputMethod()
                 ConfigExternal.ETy.PinyinCustomPhrase -> pinyinCustomPhrase()
                 ConfigExternal.ETy.RimeUserDataDir -> rimeUserDataDir(
+                    descriptor.description ?: descriptor.name
+                )
+                ConfigExternal.ETy.RimeWebDavSync -> rimeWebDavSync(
                     descriptor.description ?: descriptor.name
                 )
                 else -> stubPreference()
